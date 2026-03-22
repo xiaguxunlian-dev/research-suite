@@ -6,6 +6,25 @@ A comprehensive literature research toolkit: multi-source search, evidence quali
 
 ---
 
+## 🚀 Quick Start (GUI Version Recommended)
+
+Download the standalone executable and double-click to run — no installation required!
+
+| Platform | Download | Size | Requirements |
+|----------|----------|------|--------------|
+| Windows | [PaperTools.exe](https://github.com/xiaguxunlian-dev/PaperTools/releases/download/v1.0.0/PaperTools.exe) | ~13 MB | Windows 10/11 |
+
+**GUI Features:**
+- 🎨 Modern interface with large fonts and rounded corners — ideal for laptops and seniors
+- 🔍 Visual search across multiple databases (PubMed, arXiv, Semantic Scholar, etc.)
+- 📊 One-click evidence quality assessment
+- 📋 PICO framework extraction
+- 🌲 Forest plot generation
+- 📈 Knowledge graph construction
+- 💾 Export results to multiple formats
+
+---
+
 ## Features
 
 | Module | Command | Description |
@@ -25,9 +44,18 @@ A comprehensive literature research toolkit: multi-source search, evidence quali
 
 ---
 
-## Quick Install
+## 📥 Download & Installation
 
-### Option 1: One-Click Setup (Recommended)
+### Option 1: GUI Version (Recommended for Most Users)
+
+Download `PaperTools.exe` from the [Releases](https://github.com/xiaguxunlian-dev/PaperTools/releases) page and double-click to run. No installation or Python required!
+
+**System Requirements:**
+- Windows 10/11 (64-bit)
+- Screen resolution: 1920×1080 or higher recommended
+- Internet connection for database search
+
+### Option 2: CLI Version (For Advanced Users)
 
 ```powershell
 # 1. Install Python 3.12+
@@ -45,12 +73,35 @@ pip install -r requirements.txt
 python scripts/paper_tools.py --help
 ```
 
-### Option 2: Portable (No Install Required)
+### Option 3: Portable Python (No Install Required)
 
 ```powershell
-# Python is all you need — run directly
+# Just Python — run directly
 python scripts/paper_tools.py search "CRISPR cancer" --database pubmed --limit 3
 ```
+
+---
+
+## 📊 Usage Workflow
+
+### GUI Version (PaperTools.exe)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. Launch      → Double-click PaperTools.exe               │
+│  2. Search      → Enter keywords, select databases          │
+│  3. Browse      → View results in the results panel         │
+│  4. Assess      → Click "Quality Assessment" for RoB/GRADE  │
+│  5. Extract     → Use "PICO Extraction" for framework       │
+│  6. Export      → Save results as Markdown/CSV/JSON         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Interface Highlights:**
+- 🖥️ **Large Fonts**: 3× enlarged text for comfortable reading on any screen
+- 🎨 **Modern Design**: Large rounded corners (R16-R32) for a polished look
+- 🖱️ **One-Click Actions**: All major functions accessible via buttons
+- 📋 **Copy & Export**: Easy result copying and multi-format export
 
 ---
 
@@ -183,11 +234,13 @@ python scripts/paper_tools.py config --list-keys
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 PaperTools/
+├── PaperTools.exe           # 🎨 GUI version (Windows executable)
 ├── scripts/
+│   ├── main_gui.py          # GUI entry point (Tkinter)
 │   ├── paper_tools.py       # Main CLI entry point
 │   ├── config.py            # Configuration management
 │   ├── search/              # Multi-source search adapters
@@ -220,7 +273,8 @@ PaperTools/
 │       └── builder.py      # KG builder + trend analysis
 ├── SKILL.md              # OpenClaw Skill definition
 ├── requirements.txt      # Python dependencies
-└── README.md            # This file
+├── README.md            # Chinese documentation
+└── README_EN.md         # This file
 ```
 
 ---
@@ -239,7 +293,13 @@ PaperTools/
 
 ---
 
-## Troubleshooting
+## ❓ FAQ
+
+**Q: How do I use the GUI version?**
+A: Download `PaperTools.exe` from [Releases](https://github.com/xiaguxunlian-dev/PaperTools/releases), double-click to run. No installation needed!
+
+**Q: What are the GUI system requirements?**
+A: Windows 10/11 with 1920×1080 resolution recommended. The interface uses large fonts for accessibility.
 
 **Q: PubMed returns 0 results?**
 A: Check internet access to `https://eutils.ncbi.nlm.nih.gov`. The API is free and no VPN is needed.
@@ -259,6 +319,21 @@ A: Save papers as `.txt` files in a directory:
 ```powershell
 python scripts/paper_tools.py kg-build --texts ./papers/ --format json
 ```
+
+---
+
+## 🎨 GUI Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔍 **Visual Search** | Search across PubMed, arXiv, Semantic Scholar, OpenAlex, CrossRef |
+| 📊 **Quality Assessment** | RoB 2, ROBINS-I, GRADE, JBI with visual reports |
+| 📋 **PICO Extraction** | Auto-extract Population/Intervention/Comparison/Outcome |
+| 🌲 **Forest Plot** | Generate and visualize meta-analysis forest plots |
+| 🕸️ **Knowledge Graph** | Build and explore research knowledge graphs |
+| 💾 **Multi-format Export** | Markdown, CSV, JSON, BibTeX, RIS |
+| 🖥️ **Large Fonts** | 3× enlarged text for accessibility |
+| 🎨 **Modern UI** | Large rounded corners, gradient buttons, card-based layout |
 
 ---
 
