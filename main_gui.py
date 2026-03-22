@@ -577,17 +577,19 @@ class PaperToolsApp:
         """基于当前结果生成证据表格"""
         if not self.current_results:
             return
+        temp_path = os.path.join(_BASE, 'temp_results.json')
         threading.Thread(target=self._downstream_thread, 
-                        args=(['table', '--from', 'temp_results.json'],), 
+                        args=(['table', '--from', temp_path],), 
                         daemon=True).start()
         
     def _gen_review(self):
         """基于当前结果生成综述"""
         if not self.current_results:
             return
+        temp_path = os.path.join(_BASE, 'temp_results.json')
         topic = self.current_results.get('query', 'Research Topic')
         threading.Thread(target=self._downstream_thread,
-                        args=(['review', '--from', 'temp_results.json', '--topic', topic],),
+                        args=(['review', '--from', temp_path, '--topic', topic],),
                         daemon=True).start()
         
     def _save_results(self):
