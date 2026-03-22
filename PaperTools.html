@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PaperTools 论文工具</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  /* ── Header ── */
+  header {
+    width: 100%;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .logo {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, #58a6ff, #bc8cff);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 900; color: white;
+  }
+  .brand h1 { font-size: 18px; font-weight: 700; color: var(--text); }
+  .brand p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .star { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .star a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+  .star a:hover { color: var(--text); border-color: var(--accent); }
+  /* ── Main ── */
+  main {
+    width: 100%;
+    max-width: 960px;
+    padding: 32px 24px;
+    flex: 1;
+  }
+  /* ── Cards Grid ── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .card.active {
+    border-color: var(--accent);
+    background: #1c2128;
+  }
+  .card-icon { font-size: 28px; }
+  .card-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .card-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .card-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: rgba(88,166,255,0.15);
+    color: var(--accent);
+    width: fit-content;
+  }
+  /* ── Active Panel ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    display: none;
+    animation: fadeIn 0.2s ease;
+  }
+  .panel.show { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .panel-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .panel-header h2 { font-size: 16px; font-weight: 600; }
+  .panel-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .panel-close:hover { background: var(--border); color: var(--text); }
+  /* ── Form ── */
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+  /* ── Buttons ── */
+  .btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #79b8ff; }
+  .btn-secondary { background: var(--border); color: var(--text); }
+  .btn-secondary:hover { background: #484f58; }
+  /* ── Output ── */
+  .output {
+    margin-top: 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    max-height: 400px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    color: var(--green);
+    display: none;
+  }
+  .output.show { display: block; }
+  .output .error { color: var(--red); }
+  .output .info { color: var(--accent); }
+  /* ── Status ── */
+  .status-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 8px 24px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+  .status-dot.warn { background: var(--yellow); }
+  .status-dot.error { background: var(--red); }
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 48px;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="logo">P</div>
+  <div class="brand">
+    <h1>PaperTools 论文工具</h1>
+    <p>Scientific Literature &amp; Evidence Assistant</p>
+  </div>
+  <div class="star">
+    <a href="https://github.com/xiaguxunlian-dev/PaperTools" target="_blank">
+      ★ Star on GitHub
+    </a>
+  </div>
+</header>
+
+<!-- ── Main ── -->
+<main>
+
+  <!-- Feature Cards -->
+  <div class="cards">
+
+    <!-- Search -->
+    <div class="card" onclick="showPanel('search')">
+      <div class="card-icon">🔍</div>
+      <div class="card-title">文献检索</div>
+      <div class="card-desc">PubMed / arXiv / Semantic Scholar / OpenAlex / CrossRef 多数据库并发搜索</div>
+      <div class="card-badge">最常用</div>
+    </div>
+
+    <!-- Assess -->
+    <div class="card" onclick="showPanel('assess')">
+      <div class="card-icon">📊</div>
+      <div class="card-title">证据质量评估</div>
+      <div class="card-desc">GRADE / RoB 2 / ROBINS-I / JBI 标准化质量评估</div>
+    </div>
+
+    <!-- PICO -->
+    <div class="card" onclick="showPanel('pico')">
+      <div class="card-icon">📋</div>
+      <div class="card-title">PICO 框架提取</div>
+      <div class="card-desc">自动识别研究四要素：人群、干预、比较、结局</div>
+    </div>
+
+    <!-- Table -->
+    <div class="card" onclick="showPanel('table')">
+      <div class="card-icon">📝</div>
+      <div class="card-title">证据表格</div>
+      <div class="card-desc">生成 Markdown / CSV / JSON 格式证据汇总表</div>
+    </div>
+
+    <!-- Meta -->
+    <div class="card" onclick="showPanel('meta')">
+      <div class="card-icon">🔬</div>
+      <div class="card-title">Meta 分析</div>
+      <div class="card-desc">效应量提取 + 异质性检验 + 森林图</div>
+    </div>
+
+    <!-- Forest -->
+    <div class="card" onclick="showPanel('forest')">
+      <div class="card-icon">🌲</div>
+      <div class="card-title">森林图</div>
+      <div class="card-desc">ASCII 直接预览 / Plotly 交互图 / RevMan XML</div>
+    </div>
+
+    <!-- KG -->
+    <div class="card" onclick="showPanel('kg')">
+      <div class="card-icon">🕸️</div>
+      <div class="card-title">知识图谱</div>
+      <div class="card-desc">实体关系抽取 + Neo4j / JSON 导出</div>
+    </div>
+
+    <!-- Review -->
+    <div class="card" onclick="showPanel('review')">
+      <div class="card-icon">📖</div>
+      <div class="card-title">综述写作</div>
+      <div class="card-desc">IMRAD 格式综述草稿生成</div>
+    </div>
+
+    <!-- Workflow -->
+    <div class="card" onclick="showPanel('workflow')" style="border-color: var(--yellow);">
+      <div class="card-icon">🚀</div>
+      <div class="card-title">完整工作流</div>
+      <div class="card-desc">检索 → 评估 → Meta → 综述，一键完成</div>
+      <div class="card-badge" style="background:rgba(210,153,34,0.15);color:var(--yellow)">推荐</div>
+    </div>
+
+    <!-- Config -->
+    <div class="card" onclick="showPanel('config')">
+      <div class="card-icon">⚙️</div>
+      <div class="card-title">API Key 配置</div>
+      <div class="card-desc">管理 PubMed / Semantic Scholar / OpenAlex API Key</div>
+    </div>
+
+  </div>
+
+  <!-- ── Panel: Search ── -->
+  <div class="panel" id="panel-search">
+    <div class="panel-header">
+      <span style="font-size:20px">🔍</span>
+      <h2>文献检索</h2>
+      <button class="panel-close" onclick="hideAll()">×</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>检索词 *</label>
+        <input id="s-query" placeholder="例如: CRISPR cancer immunotherapy" onkeydown="if(event.key==='Enter')runSearch()">
+      </div>
+      <div class="form-group">
+        <label>数据库</label>
+        <select id="s-db">
+          <option value="pubmed,arxiv,semantic">全库（推荐）</option>
+          <option value="pubmed">仅 PubMed</option>
+          <option value="arxiv">仅 arXiv</option>
+          <option value="semantic">仅 Semantic Scholar</option>
+          <option value="openalex">仅 OpenAlex</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>返回数量</label>
+      <input id="s-limit" type="number" value="5" min="1" max="50" style="width:120px">
+    </div>
+    <button class="btn btn-primary" onclick="runSearch()">▶ 搜索</button>
+    <div class="output" id="out-search"></div>
+  </div>
+
+  <!-- ── Panel: Assess ── -->
+  <div class="panel" id="panel-assess">
+    <div class="panel-header">
+      <span style="font-size:20px">📊</span>
+      <h2>证据质量评估</h2>
+      <button class="panel-close" onclick="hideAll()">×</button>
+    </div>
+    <div class="form-group">
+      <label>评估工具</label>
+      <select id="a-tool">
+        <option value="grade">GRADE — 证据质量分级</option>
+        <option value="rob2">RoB 2 — RCT 偏倚风险</option>
+        <option value="robins">ROBINS-I — 非随机化研究</option>
+        <option value="jbi">JBI — 批判性评价</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>研究文本或描述 *</label>
+      <textarea id="a-text" placeholder="粘贴论文摘要或研究描述，例如: Randomized double-blind placebo-controlled trial. Allocation concealment was adequate. ITT analysis performed. Pre-registered at clinicaltrials.gov."></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="runAssess()">▶ 评估</button>
+    <div class="output" id="out-assess"></div>
+  </div>
+
+  <!-- ── Panel: PICO ── -->
+  <div class="panel" id="panel-pico">
+    <div class="panel-header">
+      <span style="font-size:20px">📋</span>
+      <h2>PICO 框架提取</h2>
+      <button class="panel-close" onclick="hideAll()">×</button>
+    </div>
+    <div class="form-group">
+      <label>研究标题或摘要 *</label>
+      <textarea id="pico-text" placeholder="输入研究标题或摘要，例如: Aspirin for cardiovascular disease prevention in adults with type 2 diabetes mellitus"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="runPico()">▶ 提取 PICO</button>
+    <div class="output" id="out-pico"></div>
+  </div>
+
+  <!-- ── Panel: Table ── -->
+  <div class="panel" id="panel-table">
+    <div class="panel-header">
+      <span style="font-size:20px">📝</span>
+      <h2>证据表格</h2>
+      <button class="panel-close" onclick="hideAll()">×</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>检索词 *</label>
+        <input id="t-query" placeholder="例如: CAR-T lymphoma therapy">
+      </div>
+      <div class="form-group">
+        <label>输出格式</label>
+        <select id="t-format">
+          <option value="markdown">Markdown 表格</option>
+          <option value="csv">CSV 文件</option>
+          <option value="json">JSON</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="runTable()">▶ 生成表格</button>
+    <div class="output" id="out-table"></div>
+  </div>
+
+  <!-- ── Panel: Meta ── -->
+  <div class="panel" id="panel-meta">
+    <div class="panel-header">
+      <span style="font-size:20px">🔬</span>
+      <h2>Meta 分析</h2>
+      <button class="panel-close" onclick="hideAll()">×</button>
+    </div>
+    <div class="form-group">
+      <label>Meta 分析模型</label>
+      <select id="m-model">
+        <option value="random">随机效应模型（推荐）</option>
+        <option value="fixed">固定效应模型</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>效应量类型</label>
+      <select id="m-type">
+        <option value="OR">比值比 OR</option>
+        <option value="RR">相对危险度 RR</option>
+        <option value="HR">风险比 HR</option>
+        <option value="MD">均数差 MD</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="runMeta()">▶ 显示森林图</button>
+    <div class="output" id="out-meta"></div>
+  </div>
+
+  <!-- ── Panel: Forest ── -->
+  <div class="panel" id="panel-forest">
+    <div class="panel-header">
+      <span style="font-size:20px">🌲</span>
+      <h2>森林图</h2>
+      <button class="panel-close" onclick="hideAll()">×</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>格式</label>
+        <select id="f-format">
+          <option value="ascii">ASCII（终端预览）</option>
+          <option value="plotly">Plotly HTML（浏览器）</option>
+          <option value="json">JSON（程序用）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>输出文件</label>
+        <input id="f-output" placeholder="留空则输出到屏幕">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="runForest()">▶ 生成森林图</button>
+    <div class="output" id="out-forest"></div>
+  </div>
+
+  <!-- ── Panel: KG ── -->
+  <div class="panel" id="panel-kg">
+    <div class="panel-header">
+      <span style="font-size:20px">🕸️</span>
+      <h2>知识图谱构建</h2>
+      <button class="panel-close" onclick="hideAll()">×</button>
+    </div>
+    <div class="form-group">
+      <label>研究主题 *（将自动检索论文并构建图谱）</label>
+      <input id="kg-query" placeholder="例如: TP53 breast cancer EGFR immunotherapy">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>导出格式</label>
+        <select id="kg-format">
+          <option value="json">JSON</option>
+          <option value="neo4j">Neo4j Cypher（数据库导入）</option>
+          <option value="networkx">NetworkX</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>论文数量</label>
+        <input id="kg-limit" type="number" value="15" min="5" max="50" style="width:100px">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="runKG()">▶ 构建图谱</button>
+    <div class="output" id="out-kg"></div>
+  </div>
+
+  <!-- ── Panel: Review ── -->
+  <div class="panel" id="panel-review">
+    <div class="panel-header">
+      <span style="font-size:20px">📖</span>
+      <h2>综述写作辅助</h2>
+      <button class="panel-close" onclick="hideAll()">×</button>
+    </div>
+    <div class="form-group">
+      <label>研究主题 *</label>
+      <input id="r-topic" placeholder="例如: CAR-T cell therapy for hematologic malignancies">
+    </div>
+    <div class="form-group">
+      <label>章节（逗号分隔，留空默认）</label>
+      <input id="r-sections" placeholder="background,methods,results,discussion">
+    </div>
+    <div class="form-group">
+      <label>输出文件（.md）</label>
+      <input id="r-output" placeholder="留空则屏幕输出">
+    </div>
+    <button class="btn btn-primary" onclick="runReview()">▶ 生成综述草稿</button>
+    <div class="output" id="out-review"></div>
+  </div>
+
+  <!-- ── Panel: Workflow ── -->
+  <div class="panel" id="panel-workflow">
+    <div class="panel-header">
+      <span style="font-size:20px">🚀</span>
+      <h2>完整工作流</h2>
+      <button class="panel-close" onclick="hideAll()">×</button>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px">
+      一键完成：文献检索 → 森林图 → GRADE 评估 → 综述草稿生成
+    </p>
+    <div class="form-group">
+      <label>研究主题 *</label>
+      <input id="wf-topic" placeholder="例如: PD-1 checkpoint inhibitor melanoma">
+    </div>
+    <button class="btn btn-primary" onclick="runWorkflow()">▶ 启动完整工作流</button>
+    <div class="output" id="out-workflow"></div>
+  </div>
+
+  <!-- ── Panel: Config ── -->
+  <div class="panel" id="panel-config">
+    <div class="panel-header">
+      <span style="font-size:20px">⚙️</span>
+      <h2>API Key 配置</h2>
+      <button class="panel-close" onclick="hideAll()">×</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>数据库</label>
+        <select id="c-db">
+          <option value="pubmed">PubMed (NCBI)</option>
+          <option value="semantic">Semantic Scholar</option>
+          <option value="openalex">OpenAlex</option>
+          <option value="bgpt">BGPT</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>API Key</label>
+        <input id="c-key" placeholder="粘贴你的 API Key">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="setKey()">💾 保存</button>
+      <button class="btn btn-secondary" onclick="listKeys()">📋 查看已配置的 Key</button>
+    </div>
+    <div class="output" id="out-config"></div>
+    <div style="margin-top:16px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--muted)">
+      <strong style="color:var(--text)">免费 API Key 申请地址：</strong><br>
+      PubMed: <a href="https://ncbi.nlm.nih.gov/account" target="_blank" style="color:var(--accent)">ncbi.nlm.nih.gov/account</a><br>
+      Semantic Scholar: <a href="https://api.semanticscholar.org" target="_blank" style="color:var(--accent)">api.semanticscholar.org</a><br>
+      OpenAlex: <a href="https://dev.openalex.org" target="_blank" style="color:var(--accent)">dev.openalex.org</a>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  PaperTools — <a href="https://github.com/xiaguxunlian-dev/PaperTools" target="_blank">GitHub</a>
+  · MIT License
+</footer>
+
+<!-- ── Status Bar ── -->
+<div class="status-bar">
+  <div class="status-dot" id="sys-dot"></div>
+  <span id="sys-status">就绪</span>
+  <span style="margin-left:auto">Python 3.10+ | Windows</span>
+</div>
+
+<script>
+  const BASE = 'scripts/paper_tools.py';
+
+  function hideAll() {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('show'));
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+  }
+
+  function showPanel(id) {
+    hideAll();
+    document.getElementById('panel-' + id).classList.add('show');
+    document.querySelector(`.card[onclick="showPanel('${id}')"]`).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function setStatus(msg, type='ok') {
+    const dot = document.getElementById('sys-dot');
+    const txt = document.getElementById('sys-status');
+    dot.className = 'status-dot' + (type === 'ok' ? '' : type === 'warn' ? ' warn' : ' error');
+    txt.textContent = msg;
+  }
+
+  function showOutput(id, text, isError=false) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'output show' + (isError ? ' error' : '');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  // ── Build command ──
+  function cmd() {
+    const py = 'python scripts/paper_tools.py';
+    return { py, args: Array.from(arguments) };
+  }
+
+  // ── Run via Windows Script Host ──
+  function run(cmd, outId, label) {
+    setStatus('正在执行 ' + label + '...', 'warn');
+    showOutput(outId, '▶ 正在执行，请稍候...\n', false);
+    const { ActiveXObject } = this;
+    try {
+      const shell = new ActiveXObject('WScript.Shell');
+      const exec = shell.Exec(cmd);
+      let stdout = '', stderr = '', done = false;
+      const poll = setInterval(() => {
+        try {
+          if (!exec.Status) {
+            stdout += exec.StdOut.ReadAll();
+            stderr += exec.StdErr.ReadAll();
+          } else if (!done) {
+            done = true;
+            clearInterval(poll);
+            stdout += exec.StdOut.ReadAll();
+            stderr += exec.StdErr.ReadAll();
+            const out = (stdout || stderr || '(无输出)').trim();
+            showOutput(outId, out, !!stderr);
+            setStatus(out.startsWith('ERROR') || !!stderr ? '执行出错' : '就绪', out.startsWith('ERROR') || !!stderr ? 'error' : 'ok');
+          }
+        } catch(e) {
+          clearInterval(poll);
+          showOutput(outId, '执行出错: ' + e.message, true);
+          setStatus('执行出错', 'error');
+        }
+      }, 200);
+    } catch(e) {
+      showOutput(outId, '浏览器无法执行命令。\n\n请使用 PaperTools.bat 启动，或双击运行：\n\n' + cmd, false);
+      setStatus('就绪', 'ok');
+    }
+  }
+
+  // ── Search ──
+  function runSearch() {
+    const q = document.getElementById('s-query').value.trim();
+    if (!q) { alert('请输入检索词'); return; }
+    const db = document.getElementById('s-db').value;
+    const limit = document.getElementById('s-limit').value || 5;
+    const cmd = `python scripts/paper_tools.py search "${q}" --database ${db} --limit ${limit}`;
+    run(cmd, 'out-search', '文献检索');
+  }
+
+  // ── Assess ──
+  function runAssess() {
+    const text = document.getElementById('a-text').value.trim();
+    if (!text) { alert('请输入研究文本'); return; }
+    const tool = document.getElementById('a-tool').value;
+    const arg = tool === 'grade' ? `--query "${text}"` : `--papers "${text}"`;
+    const cmd = `python scripts/paper_tools.py assess --tool ${tool} ${arg}`;
+    run(cmd, 'out-assess', '证据评估');
+  }
+
+  // ── PICO ──
+  function runPico() {
+    const text = document.getElementById('pico-text').value.trim();
+    if (!text) { alert('请输入研究文本'); return; }
+    const cmd = `python scripts/paper_tools.py pico --text "${text}"`;
+    run(cmd, 'out-pico', 'PICO 提取');
+  }
+
+  // ── Table ──
+  function runTable() {
+    const q = document.getElementById('t-query').value.trim();
+    if (!q) { alert('请输入检索词'); return; }
+    const fmt = document.getElementById('t-format').value;
+    const cmd = `python scripts/paper_tools.py table --query "${q}" --format ${fmt}`;
+    run(cmd, 'out-table', '证据表格');
+  }
+
+  // ── Meta ──
+  function runMeta() {
+    const model = document.getElementById('m-model').value;
+    const type = document.getElementById('m-type').value;
+    const cmd = `python scripts/paper_tools.py forest --format ascii --model ${model} --type ${type}`;
+    run(cmd, 'out-meta', 'Meta 分析森林图');
+  }
+
+  // ── Forest ──
+  function runForest() {
+    const fmt = document.getElementById('f-format').value;
+    const output = document.getElementById('f-output').value.trim();
+    const outFlag = output ? ` --output ${output}` : '';
+    const cmd = `python scripts/paper_tools.py forest --format ${fmt}${outFlag}`;
+    run(cmd, 'out-forest', '森林图');
+  }
+
+  // ── KG ──
+  function runKG() {
+    const q = document.getElementById('kg-query').value.trim();
+    if (!q) { alert('请输入研究主题'); return; }
+    const fmt = document.getElementById('kg-format').value;
+    const limit = document.getElementById('kg-limit').value || 15;
+    showOutput('out-kg', '▶ 第1步：检索论文...\n', false);
+    const cmd1 = `python scripts/paper_tools.py search "${q}" --database pubmed --limit ${limit} --json > _papers.json`;
+    const cmd2 = `python scripts/paper_tools.py kg-build --papers _papers.json --format ${fmt}`;
+    const cmd = cmd1 + ' && ' + cmd2 + ' && del _papers.json';
+    run(cmd, 'out-kg', '知识图谱构建');
+  }
+
+  // ── Review ──
+  function runReview() {
+    const topic = document.getElementById('r-topic').value.trim();
+    if (!topic) { alert('请输入研究主题'); return; }
+    const sections = document.getElementById('r-sections').value.trim();
+    const output = document.getElementById('r-output').value.trim();
+    const secFlag = sections ? ` --sections ${sections}` : '';
+    const outFlag = output ? ` --output ${output}` : '';
+    const cmd = `python scripts/paper_tools.py review --topic "${topic}"${secFlag}${outFlag}`;
+    run(cmd, 'out-review', '综述写作');
+  }
+
+  // ── Workflow ──
+  function runWorkflow() {
+    const topic = document.getElementById('wf-topic').value.trim();
+    if (!topic) { alert('请输入研究主题'); return; }
+    const cmd = [
+      `python scripts/paper_tools.py search "${topic}" --database pubmed,arxiv --limit 10`,
+      `python scripts/paper_tools.py forest --format ascii`,
+      `python scripts/paper_tools.py assess --tool grade --query "${topic}"`,
+      `python scripts/paper_tools.py review --topic "${topic}" --output "综述_${topic}.md"`,
+    ].join(' && ');
+    run(cmd, 'out-workflow', '完整工作流');
+  }
+
+  // ── Config ──
+  function setKey() {
+    const db = document.getElementById('c-db').value;
+    const key = document.getElementById('c-key').value.trim();
+    if (!key) { alert('请输入 API Key'); return; }
+    const cmd = `python scripts/paper_tools.py config --set-key ${db}=${key}`;
+    run(cmd, 'out-config', '配置 API Key');
+  }
+
+  function listKeys() {
+    const cmd = `python scripts/paper_tools.py config --list-keys`;
+    run(cmd, 'out-config', '查看 Keys');
+  }
+
+  // Init
+  setStatus('就绪 — 点击功能卡片开始使用', 'ok');
+</script>
+
+<!--[if IE]>
+<script>
+  document.write('请使用现代浏览器（Chrome / Edge / Firefox）打开本文件');
+</script>
+<![endif]-->
+</body>
+</html>
