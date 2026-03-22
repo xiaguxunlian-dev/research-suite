@@ -1,151 +1,324 @@
-# 🔬 Research Suite
+# Research Suite — AI 加速科研助手
 
-> AI 加速的科研文献综述工具 — 从检索到写作，全流程自动化
+多功能科学研究工具包：多源文献检索、证据质量评估、Meta 分析、知识图谱构建，零 API Key 即可上手。
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-green.svg)](https://www.python.org/)
+**GitHub**: https://github.com/xiaguxunlian-dev/research-suite
 
-## ✨ 功能特性
+---
 
-### 🔍 多源联邦检索
-并发查询 6+ 主流学术数据库，统一去重返回结构化结果：
+## 功能总览
 
-| 数据库 | 特色 | API 需要 |
-|--------|------|---------|
-| **PubMed** | 医学/生命科学最大库 | 可选 API Key |
-| **arXiv** | 预印本，最新研究 | 无 |
-| **Semantic Scholar** | AI 摘要 + 引用图谱 | 可选 |
-| **OpenAlex** | 开放知识图谱 | 可选 |
-| **CrossRef** | DOI 元数据 | 无 |
-| **BGPT** | 结构化实验数据 | 可选 |
+| 模块 | 命令 | 说明 |
+|------|------|------|
+| 🔍 **多源检索** | `search` | PubMed / arXiv / Semantic Scholar / OpenAlex / CrossRef 并发搜索 |
+| 📊 **质量评估** | `assess` | RoB 2 / ROBINS-I / GRADE / JBI 标准化评估 |
+| 📋 **PICO 提取** | `pico` | 自动从文本提取 Population / Intervention / Comparison / Outcome |
+| 📝 **证据表格** | `table` | 生成 Markdown / CSV / JSON 证据汇总表 |
+| 🌲 **PRISMA 流程图** | `prisma` | 生成系统综述 PRISMA 流程图数据 |
+| 📖 **综述写作** | `review` | IMRAD 格式综述草稿生成 |
+| 📚 **参考文献** | `refs` | BibTeX / Vancouver / RIS 多格式参考文献 |
+| 🔬 **Meta 分析** | `meta` | 效应量提取 + 异质性计算 + 森林图 |
+| 🌲 **森林图** | `forest` | ASCII / Plotly / RevMan / Stata 森林图 |
+| 🕸️ **知识图谱** | `kg-build` | 本地文件或论文构建 KG，Neo4j / JSON / NetworkX 导出 |
+| 📈 **研究趋势** | `kg-trends` | 实体时间线 + 热点分析 + Gap 发现 |
+| ⚙️ **配置管理** | `config` | API Key 存储与配置 |
 
-### 📊 质量评估
-标准化循证医学质量评估工具：
+---
 
-- **RoB 2** — 随机对照试验偏倚风险
-- **ROBINS-I** — 非随机化研究偏倚风险
-- **GRADE** — 证据质量综合分级
-- **JBI Critical Appraisal** — 批判性评价清单
+## 快速安装
 
-### 📋 证据合成
-- **PICO 框架** — 系统综述问题标准化
-- **证据表格** — Markdown / CSV / JSON 多格式导出
-- **PRISMA 流程图** — 系统综述流程数据
+### 方式一：一键安装（推荐）
 
-### 📝 综述写作
-- **IMRAD 格式** — 自动生成 Introduction / Methods / Results / Discussion
-- **参考文献格式化** — BibTeX / RIS / Vancouver / EndNote
+```powershell
+# 1. 安装 Python 3.12+
+winget install Python.Python.3.12
+# 或从 https://python.org 下载安装包（安装时勾选 Add to PATH）
 
-## 🚀 快速开始
-
-### 安装
-
-```bash
-# 克隆本仓库
-git clone https://github.com/YOUR_NAME/research-suite.git
+# 2. 克隆本仓库
+git clone https://github.com/xiaguxunlian-dev/research-suite.git
 cd research-suite
 
-# 安装依赖
+# 3. 安装依赖
 pip install -r requirements.txt
 
-# 配置 API Keys（可选）
+# 4. 验证安装
+python scripts/research.py --help
+```
+
+### 方式二：便携使用（无需安装）
+
+```powershell
+# 只需 Python，直接运行主脚本
+python scripts/research.py search "CRISPR cancer" --database pubmed --limit 3
+```
+
+---
+
+## 使用教程
+
+### 1. 文献检索
+
+```powershell
+# PubMed 检索（无需 API Key）
+python scripts/research.py search "CRISPR cancer" --database pubmed --limit 5
+
+# arXiv 检索
+python scripts/research.py search "machine learning healthcare" --database arxiv --limit 5
+
+# 多数据库并发检索
+python scripts/research.py search "PD-1 immunotherapy" --database pubmed,semantic --limit 3
+
+# JSON 输出（方便程序处理）
+python scripts/research.py search "metformin diabetes" --database pubmed --json
+```
+
+**输出示例**：
+```
+============================================================
+[SEARCH] Found 65,555 papers
+============================================================
+
+[1] Genome modification by CRISPR/Cas9.
+    Authors: Ma, Zhang, Huang
+    Year: 2014 | Journal: The FEBS journal
+    DOI: 10.1111/febs.13110
+    Abstract: Clustered regularly interspaced short palindromic repeats...
+```
+
+### 2. 证据质量评估
+
+```powershell
+# GRADE 评估（输入检索词，自动分析）
+python scripts/research.py assess --tool grade --query "Aspirin cardiovascular prevention"
+
+# RoB 2 评估（评估 RCT 偏倚风险）
+python scripts/research.py assess --tool rob2 --papers paper1.txt paper2.txt
+
+# JBI 评估
+python scripts/research.py assess --tool jbi --papers paper.txt
+```
+
+**GRADE 输出示例**：
+```
+## GRADE 证据质量评估
+**结局指标**: Aspirin vs Placebo for cardiovascular prevention
+**研究设计**: RCT
+
+| 因素 | 状态 | 影响 |
+|------|------|------|
+| 偏倚风险 (RoB) | ✅ 无明显问题 | - |
+| 异质性 (I²) | ✅ 无明显问题 | - |
+| 发表偏倚 | ✅ 无明显证据 | - |
+
+**证据质量**: High
+```
+
+### 3. PICO 框架提取
+
+```powershell
+python scripts/research.py pico --text "Aspirin for cardiovascular disease prevention in adults with diabetes mellitus"
+```
+
+**输出**：
+```json
+{
+  "population": ["adults with diabetes mellitus", "cardiovascular disease"],
+  "intervention": ["aspirin"],
+  "comparison": [],
+  "outcome": ["cardiovascular disease prevention"],
+  "clinical_question": "Aspirin for cardiovascular disease prevention in adults with diabetes mellitus"
+}
+```
+
+### 4. Meta 分析
+
+```powershell
+# 从 JSON 文件加载研究数据
+python scripts/research.py meta --studies studies.json --model random --output result.json
+
+# 直接从文献文本提取效应量
+python scripts/research.py meta --extract paper_abstract.txt --model random
+```
+
+**studies.json 格式**：
+```json
+[
+  {
+    "name": "Smith 2020",
+    "type": "OR",
+    "effect": 0.65,
+    "ci_lower": 0.48,
+    "ci_upper": 0.88,
+    "year": 2020
+  },
+  {
+    "name": "Johnson 2021",
+    "type": "OR",
+    "effect": 0.72,
+    "ci_lower": 0.55,
+    "ci_upper": 0.95,
+    "year": 2021
+  }
+]
+```
+
+### 5. 森林图
+
+```powershell
+# ASCII 森林图（无需任何依赖）
+python scripts/research.py forest --format ascii
+
+# JSON 格式（用于程序处理）
+python scripts/research.py forest --format json --output forest.json
+
+# Plotly HTML（可交互图表）
+python scripts/research.py forest --format plotly --output forest.html
+```
+
+**ASCII 森林图示例**：
+```
+Forest Plot OR
+                      0.72        100%
+---------------------------------------------------------------
+Smith 2020            0.65  [0.48-0.88]  25.0%
+Johnson 2021          0.72  [0.55-0.95]  30.0%
+Williams 2022         0.58  [0.40-0.84]  20.0%
+Brown 2023            0.69  [0.50-0.95]  25.0%
+
+I2=42.5%  Q=6.8  p=0.034
+```
+
+### 6. 知识图谱构建
+
+```powershell
+# 从本地文本文件构建知识图谱
+python scripts/research.py kg-build --texts ./test_corpus --format json
+
+# 从 PubMed 检索结果构建
+python scripts/research.py search "TP53 cancer" --database pubmed --limit 20 --json > papers.json
+python scripts/research.py kg-build --papers papers.json --format neo4j --output kg.cypher
+
+# 研究趋势分析
+python scripts/research.py kg-trends --kg kg.json --output trends.json
+```
+
+### 7. 综述写作
+
+```powershell
+# 生成 IMRAD 格式综述草稿
+python scripts/research.py review --topic "CRISPR gene editing cancer therapy" --output review.md
+
+# 指定章节
+python scripts/research.py review --topic "Immunotherapy melanoma" --sections background,methods,results,discussion
+```
+
+---
+
+## API Key 配置（可选）
+
+以下数据库可免费申请 API Key，提升检索频率限制：
+
+| 数据库 | 申请地址 | 用途 |
+|--------|---------|------|
+| PubMed (NCBI) | https://ncbi.nlm.nih.gov/account |
+| Semantic Scholar | https://api.semanticscholar.org |
+| OpenAlex | https://dev.openalex.org |
+| CrossRef | https://crossref.org |
+
+```powershell
+# 配置 API Key
 python scripts/research.py config --set-key pubmed=YOUR_KEY
-python scripts/research.py config --set-key semanticscholar=YOUR_KEY
+python scripts/research.py config --set-key semantic=YOUR_KEY
+
+# 查看已配置的 Key
+python scripts/research.py config --list-keys
 ```
 
-### 检索文献
+---
 
-```bash
-python scripts/research.py search "CRISPR gene editing efficiency" \
-    --db pubmed,arxiv,semantic \
-    --limit 30
-```
-
-### 质量评估
-
-```bash
-# RoB 2 评估 RCT
-python scripts/research.py assess --tool rob2 --papers paper1.pdf paper2.pdf
-
-# GRADE 评估
-python scripts/research.py assess --tool grade \
-    --query "Statins for cardiovascular prevention"
-```
-
-### 生成证据表格
-
-```bash
-python scripts/research.py table \
-    --query "CAR-T therapy hematologic malignancies" \
-    --format markdown
-```
-
-### 生成综述草稿
-
-```bash
-python scripts/research.py review \
-    --topic "Immunotherapy in solid tumors" \
-    --sections background,methods,results \
-    --output review_draft.md
-```
-
-### 生成 PRISMA 流程图数据
-
-```bash
-python scripts/research.py prisma \
-    --query "Your systematic review question"
-```
-
-## 📁 项目结构
+## 项目结构
 
 ```
 research-suite/
-├── SKILL.md                          # OpenClaw Skill 定义
-├── README.md
-├── LICENSE
-├── requirements.txt
 ├── scripts/
-│   ├── research.py                   # CLI 主入口
-│   ├── config.py                     # 配置管理
-│   ├── search/
-│   │   ├── federated.py              # 联邦检索引擎
-│   │   ├── pubmed.py                 # PubMed 适配器
-│   │   ├── arxiv.py                  # arXiv 适配器
-│   │   ├── semantic.py               # Semantic Scholar 适配器
-│   │   ├── openalex.py               # OpenAlex 适配器
-│   │   ├── crossref.py               # CrossRef 适配器
-│   │   └── bgpt.py                   # BGPT 适配器
-│   ├── assess/
-│   │   ├── rob2.py                   # RoB 2 评估器
-│   │   ├── robins.py                 # ROBINS-I 评估器
-│   │   ├── grade.py                  # GRADE 评估器
-│   │   └── jbi.py                    # JBI 评估器
-│   ├── synthesize/
-│   │   ├── pico.py                   # PICO 提取器
-│   │   ├── evidence_table.py          # 证据表格生成器
-│   │   └── prisma.py                 # PRISMA 流程图生成器
-│   └── write/
-│       ├── imrad.py                  # IMRAD 综述生成器
-│       └── references.py             # 参考文献格式化
+│   ├── research.py          # 主 CLI 入口
+│   ├── config.py             # 配置管理
+│   ├── search/               # 多源检索适配器
+│   │   ├── federated.py     # 联邦检索引擎
+│   │   ├── pubmed.py        # PubMed / Europe PMC
+│   │   ├── arxiv.py         # arXiv
+│   │   ├── semantic.py      # Semantic Scholar
+│   │   ├── openalex.py      # OpenAlex
+│   │   ├── crossref.py     # CrossRef
+│   │   └── bgpt.py          # BGPT 医学数据库
+│   ├── assess/               # 质量评估工具
+│   │   ├── rob2.py          # RoB 2 (Cochrane)
+│   │   ├── robins.py        # ROBINS-I
+│   │   ├── grade.py         # GRADE
+│   │   └── jbi.py           # JBI 清单
+│   ├── synthesize/           # 证据合成
+│   │   ├── pico.py          # PICO 框架
+│   │   ├── evidence_table.py # 证据表格
+│   │   └── prisma.py        # PRISMA 流程图
+│   ├── write/                # 写作辅助
+│   │   ├── imrad.py         # IMRAD 综述
+│   │   └── references.py     # 参考文献格式化
+│   ├── meta/                # Meta 分析
+│   │   ├── effect_size.py   # 效应量提取
+│   │   ├── heterogeneity.py # 异质性统计
+│   │   ├── forest_plot.py   # 森林图
+│   │   └── analyzer.py      # Meta 流水线
+│   └── kg/                  # 知识图谱
+│       ├── extractor.py      # 实体/关系抽取
+│       └── builder.py        # KG 构建 + 趋势分析
+├── SKILL.md                 # OpenClaw Skill 定义
+├── requirements.txt          # Python 依赖
+└── README.md               # 本文件
 ```
 
-## 🔧 API Key 申请
+---
 
-| 服务 | 申请地址 | 免费限制 |
-|------|---------|---------|
-| PubMed | [NCBI](https://www.ncbi.nlm.nih.gov/home/develop/api/) | 无 Key: 3 req/s |
-| Semantic Scholar | [API Portal](https://api.semanticscholar.org/) | 100 req/5min |
-| OpenAlex | [openalex.org](https://docs.openalex.org/) | 10 req/sec |
-| BGPT | [bgpt.pro](https://bgpt.pro/mcp) | 50 req/网络 |
+## 依赖说明
 
-## 📖 文档
+| 依赖包 | 用途 |
+|--------|------|
+| `requests` | HTTP 请求 |
+| `aiohttp` | 异步并发检索 |
+| `feedparser` | PubMed XML 解析 |
+| `matplotlib` | 森林图可视化（可选） |
+| `networkx` | 图网络分析（可选） |
 
-详细文档见 [SKILL.md](SKILL.md)
+> **零依赖运行**：核心模块完全独立，仅需 Python 3.10+，无任何第三方依赖即可运行检索和评估功能。
 
-## 🤝 贡献
+---
 
-欢迎提交 Issue 和 Pull Request！
+## 常见问题
 
-## 📄 许可证
+**Q: PubMed 检索返回 0 结果？**
+A: 确认网络可访问外网。PubMed API 地址为 `https://eutils.ncbi.nlm.nih.gov`，无需 VPN。
 
-MIT License - 详见 [LICENSE](LICENSE)
+**Q: 出现 `SSL` 相关错误？**
+A: 公司网络可能拦截 HTTPS 请求。可尝试：
+```powershell
+set SSL_CERT_FILE=C:\Python312\Lib\site-packages\certifi\ cacert.pem
+python scripts/research.py search "your query" --database pubmed
+```
+
+**Q: arXiv 检索超时？**
+A: arXiv 已切换至 HTTPS 协议，确保网络可访问 `https://export.arxiv.org`。
+
+**Q: 如何批量处理多篇论文？**
+A: 将论文保存为文本文件放入目录，用 `--texts` 参数批量处理：
+```powershell
+python scripts/research.py kg-build --texts ./papers/ --format json
+```
+
+---
+
+## 许可证
+
+MIT License
+
+## Star History
+
+如果这个工具对你的研究有帮助，欢迎 ⭐ Star！
