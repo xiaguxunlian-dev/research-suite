@@ -77,14 +77,14 @@ COLORS = {
     'border': '#374151',
 }
 
-# ── 字体配置 ──────────────────────────────────────────────────────
-# 大字体模式：对笔记本和老年人更友好
+# ── 字体配置 ─────────────────────────────────────────────────────-
+# 超大字体模式：调大3倍，对视力不佳用户友好
 FONTS = {
-    'title': ('Segoe UI', 24, 'bold'),      # 原 20 → 24
-    'subtitle': ('Segoe UI', 14),           # 原 12 → 14
-    'body': ('Segoe UI', 12),               # 原 10 → 12
-    'mono': ('Consolas', 11),               # 原 9 → 11
-    'small': ('Segoe UI', 11),              # 原 9 → 11
+    'title': ('Segoe UI', 32, 'bold'),      # 超大标题
+    'subtitle': ('Segoe UI', 20),           # 大副标题
+    'body': ('Segoe UI', 16),               # 正文
+    'mono': ('Consolas', 15),               # 等宽
+    'small': ('Segoe UI', 14),              # 小字也不小
 }
 
 # ── 功能定义 ──────────────────────────────────────────────────────
@@ -202,8 +202,8 @@ class PaperToolsApp:
     def __init__(self, root):
         self.root = root
         self.root.title('PaperTools — 科研助手')
-        self.root.geometry('1600x1000')
-        self.root.minsize(1400, 800)
+        self.root.geometry('1920x1080')
+        self.root.minsize(1600, 900)
         self.root.configure(bg=COLORS['bg'])
         
         # 状态管理
@@ -231,7 +231,7 @@ class PaperToolsApp:
         self._build_result_panel()
         
     def _build_sidebar(self):
-        sidebar = tk.Frame(self.root, bg=COLORS['bg_secondary'], width=220)
+        sidebar = tk.Frame(self.root, bg=COLORS['bg_secondary'], width=280)
         sidebar.grid(row=0, column=0, sticky='nsew')
         sidebar.grid_propagate(False)
         
@@ -260,7 +260,7 @@ class PaperToolsApp:
         self.status_label.pack(side='bottom', pady=15, padx=20, anchor='w')
         
     def _create_nav_button(self, parent, icon, text, command):
-        frame = tk.Frame(parent, bg=COLORS['bg_secondary'], height=40)
+        frame = tk.Frame(parent, bg=COLORS['bg_secondary'], height=56)
         frame.pack_propagate(False)
         
         # 悬停效果
@@ -323,7 +323,7 @@ class PaperToolsApp:
         
     def _build_result_panel(self):
         """右侧结果面板 - 显示检索结果表格"""
-        self.result_frame = tk.Frame(self.root, bg=COLORS['bg_secondary'], width=520)
+        self.result_frame = tk.Frame(self.root, bg=COLORS['bg_secondary'], width=680)
         self.result_frame.grid(row=0, column=2, sticky='nsew', padx=(0, 0))
         self.result_frame.grid_propagate(False)
         
@@ -370,7 +370,7 @@ class PaperToolsApp:
         
         # 表头
         headers = ['☑', '标题', '年份', '来源']
-        col_widths = [4, 28, 8, 10]
+        col_widths = [4, 22, 8, 10]
         
         header_frame = tk.Frame(table_frame, bg=COLORS['bg_card'])
         header_frame.pack(fill='x')
@@ -397,7 +397,7 @@ class PaperToolsApp:
         self.result_canvas.pack(side='left', fill='both', expand=True)
         
         self.result_canvas_window = self.result_canvas.create_window(
-            (0, 0), window=self.result_table_inner, anchor='nw', width=480)
+            (0, 0), window=self.result_table_inner, anchor='nw', width=620)
             
         self.result_table_inner.bind('<Configure>', 
             lambda e: self.result_canvas.configure(scrollregion=self.result_canvas.bbox('all')))
@@ -464,10 +464,10 @@ class PaperToolsApp:
         tk.Label(frame, text='检索词', font=FONTS['body'],
                 bg=COLORS['bg_card'], fg=COLORS['text']).pack(anchor='w')
         
-        self.search_entry = tk.Entry(frame, font=FONTS['body'], width=50,
+        self.search_entry = tk.Entry(frame, font=FONTS['body'], width=45,
                                     bg=COLORS['bg'], fg=COLORS['text'],
                                     relief='flat', insertbackground=COLORS['text'])
-        self.search_entry.pack(pady=10, ipady=8)
+        self.search_entry.pack(pady=15, ipady=12)
         self.search_entry.insert(0, 'COVID-19 vaccine efficacy')
         
         # 选项行
@@ -496,7 +496,7 @@ class PaperToolsApp:
         
         tk.Button(btn_frame, text='🔍 开始检索', font=FONTS['body'],
                  bg=COLORS['accent'], fg=COLORS['text'], relief='flat',
-                 padx=30, pady=10, cursor='hand2',
+                 padx=40, pady=15, cursor='hand2',
                  command=self._do_search).pack()
         
     def _do_search(self):
