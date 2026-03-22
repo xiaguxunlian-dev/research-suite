@@ -1,8 +1,8 @@
-# Research Suite — AI 加速科研助手
+# PaperTools — 论文工具
 
-多功能科学研究工具包：多源文献检索、证据质量评估、Meta 分析、知识图谱构建，零 API Key 即可上手。
+多功能文献研究工具包：多源文献检索、证据质量评估、Meta 分析、知识图谱构建，零 API Key 即可上手。
 
-**GitHub**: https://github.com/xiaguxunlian-dev/research-suite
+**GitHub**: https://github.com/xiaguxunlian-dev/PaperTools
 
 ---
 
@@ -35,21 +35,21 @@ winget install Python.Python.3.12
 # 或从 https://python.org 下载安装包（安装时勾选 Add to PATH）
 
 # 2. 克隆本仓库
-git clone https://github.com/xiaguxunlian-dev/research-suite.git
-cd research-suite
+git clone https://github.com/xiaguxunlian-dev/PaperTools.git
+cd PaperTools
 
 # 3. 安装依赖
 pip install -r requirements.txt
 
 # 4. 验证安装
-python scripts/research.py --help
+python scripts/paper_tools.py --help
 ```
 
 ### 方式二：便携使用（无需安装）
 
 ```powershell
 # 只需 Python，直接运行主脚本
-python scripts/research.py search "CRISPR cancer" --database pubmed --limit 3
+python scripts/paper_tools.py search "CRISPR cancer" --database pubmed --limit 3
 ```
 
 ---
@@ -60,84 +60,45 @@ python scripts/research.py search "CRISPR cancer" --database pubmed --limit 3
 
 ```powershell
 # PubMed 检索（无需 API Key）
-python scripts/research.py search "CRISPR cancer" --database pubmed --limit 5
+python scripts/paper_tools.py search "CRISPR cancer" --database pubmed --limit 5
 
 # arXiv 检索
-python scripts/research.py search "machine learning healthcare" --database arxiv --limit 5
+python scripts/paper_tools.py search "machine learning healthcare" --database arxiv --limit 5
 
 # 多数据库并发检索
-python scripts/research.py search "PD-1 immunotherapy" --database pubmed,semantic --limit 3
+python scripts/paper_tools.py search "PD-1 immunotherapy" --database pubmed,semantic --limit 3
 
 # JSON 输出（方便程序处理）
-python scripts/research.py search "metformin diabetes" --database pubmed --json
-```
-
-**输出示例**：
-```
-============================================================
-[SEARCH] Found 65,555 papers
-============================================================
-
-[1] Genome modification by CRISPR/Cas9.
-    Authors: Ma, Zhang, Huang
-    Year: 2014 | Journal: The FEBS journal
-    DOI: 10.1111/febs.13110
-    Abstract: Clustered regularly interspaced short palindromic repeats...
+python scripts/paper_tools.py search "metformin diabetes" --database pubmed --json
 ```
 
 ### 2. 证据质量评估
 
 ```powershell
 # GRADE 评估（输入检索词，自动分析）
-python scripts/research.py assess --tool grade --query "Aspirin cardiovascular prevention"
+python scripts/paper_tools.py assess --tool grade --query "Aspirin cardiovascular prevention"
 
 # RoB 2 评估（评估 RCT 偏倚风险）
-python scripts/research.py assess --tool rob2 --papers paper1.txt paper2.txt
+python scripts/paper_tools.py assess --tool rob2 --papers paper1.txt paper2.txt
 
 # JBI 评估
-python scripts/research.py assess --tool jbi --papers paper.txt
-```
-
-**GRADE 输出示例**：
-```
-## GRADE 证据质量评估
-**结局指标**: Aspirin vs Placebo for cardiovascular prevention
-**研究设计**: RCT
-
-| 因素 | 状态 | 影响 |
-|------|------|------|
-| 偏倚风险 (RoB) | ✅ 无明显问题 | - |
-| 异质性 (I²) | ✅ 无明显问题 | - |
-| 发表偏倚 | ✅ 无明显证据 | - |
-
-**证据质量**: High
+python scripts/paper_tools.py assess --tool jbi --papers paper.txt
 ```
 
 ### 3. PICO 框架提取
 
 ```powershell
-python scripts/research.py pico --text "Aspirin for cardiovascular disease prevention in adults with diabetes mellitus"
-```
-
-**输出**：
-```json
-{
-  "population": ["adults with diabetes mellitus", "cardiovascular disease"],
-  "intervention": ["aspirin"],
-  "comparison": [],
-  "outcome": ["cardiovascular disease prevention"],
-  "clinical_question": "Aspirin for cardiovascular disease prevention in adults with diabetes mellitus"
-}
+python scripts/paper_tools.py pico --text "Aspirin for cardiovascular disease prevention in adults with diabetes mellitus"
 ```
 
 ### 4. Meta 分析
 
 ```powershell
 # 从 JSON 文件加载研究数据
-python scripts/research.py meta --studies studies.json --model random --output result.json
+python scripts/paper_tools.py meta --studies studies.json --model random --output result.json
 
 # 直接从文献文本提取效应量
-python scripts/research.py meta --extract paper_abstract.txt --model random
+python scripts/paper_tools.py meta --extract paper_abstract.txt --model random
 ```
 
 **studies.json 格式**：
@@ -166,13 +127,13 @@ python scripts/research.py meta --extract paper_abstract.txt --model random
 
 ```powershell
 # ASCII 森林图（无需任何依赖）
-python scripts/research.py forest --format ascii
+python scripts/paper_tools.py forest --format ascii
 
 # JSON 格式（用于程序处理）
-python scripts/research.py forest --format json --output forest.json
+python scripts/paper_tools.py forest --format json --output forest.json
 
 # Plotly HTML（可交互图表）
-python scripts/research.py forest --format plotly --output forest.html
+python scripts/paper_tools.py forest --format plotly --output forest.html
 ```
 
 **ASCII 森林图示例**：
@@ -182,8 +143,8 @@ Forest Plot OR
 ---------------------------------------------------------------
 Smith 2020            0.65  [0.48-0.88]  25.0%
 Johnson 2021          0.72  [0.55-0.95]  30.0%
-Williams 2022         0.58  [0.40-0.84]  20.0%
-Brown 2023            0.69  [0.50-0.95]  25.0%
+Williams 2022        0.58  [0.40-0.84]  20.0%
+Brown 2023           0.69  [0.50-0.95]  25.0%
 
 I2=42.5%  Q=6.8  p=0.034
 ```
@@ -192,24 +153,24 @@ I2=42.5%  Q=6.8  p=0.034
 
 ```powershell
 # 从本地文本文件构建知识图谱
-python scripts/research.py kg-build --texts ./test_corpus --format json
+python scripts/paper_tools.py kg-build --texts ./test_corpus --format json
 
 # 从 PubMed 检索结果构建
-python scripts/research.py search "TP53 cancer" --database pubmed --limit 20 --json > papers.json
-python scripts/research.py kg-build --papers papers.json --format neo4j --output kg.cypher
+python scripts/paper_tools.py search "TP53 cancer" --database pubmed --limit 20 --json > papers.json
+python scripts/paper_tools.py kg-build --papers papers.json --format neo4j --output kg.cypher
 
 # 研究趋势分析
-python scripts/research.py kg-trends --kg kg.json --output trends.json
+python scripts/paper_tools.py kg-trends --kg kg.json --output trends.json
 ```
 
 ### 7. 综述写作
 
 ```powershell
 # 生成 IMRAD 格式综述草稿
-python scripts/research.py review --topic "CRISPR gene editing cancer therapy" --output review.md
+python scripts/paper_tools.py review --topic "CRISPR gene editing cancer therapy" --output review.md
 
 # 指定章节
-python scripts/research.py review --topic "Immunotherapy melanoma" --sections background,methods,results,discussion
+python scripts/paper_tools.py review --topic "Immunotherapy melanoma" --sections background,methods,results,discussion
 ```
 
 ---
@@ -227,11 +188,11 @@ python scripts/research.py review --topic "Immunotherapy melanoma" --sections ba
 
 ```powershell
 # 配置 API Key
-python scripts/research.py config --set-key pubmed=YOUR_KEY
-python scripts/research.py config --set-key semantic=YOUR_KEY
+python scripts/paper_tools.py config --set-key pubmed=YOUR_KEY
+python scripts/paper_tools.py config --set-key semantic=YOUR_KEY
 
 # 查看已配置的 Key
-python scripts/research.py config --list-keys
+python scripts/paper_tools.py config --list-keys
 ```
 
 ---
@@ -239,41 +200,41 @@ python scripts/research.py config --list-keys
 ## 项目结构
 
 ```
-research-suite/
+PaperTools/
 ├── scripts/
-│   ├── research.py          # 主 CLI 入口
-│   ├── config.py             # 配置管理
-│   ├── search/               # 多源检索适配器
-│   │   ├── federated.py     # 联邦检索引擎
-│   │   ├── pubmed.py        # PubMed / Europe PMC
-│   │   ├── arxiv.py         # arXiv
-│   │   ├── semantic.py      # Semantic Scholar
+│   ├── paper_tools.py          # 主 CLI 入口
+│   ├── config.py               # 配置管理
+│   ├── search/                # 多源检索适配器
+│   │   ├── federated.py      # 联邦检索引擎
+│   │   ├── pubmed.py         # PubMed / Europe PMC
+│   │   ├── arxiv.py          # arXiv
+│   │   ├── semantic.py        # Semantic Scholar
 │   │   ├── openalex.py      # OpenAlex
-│   │   ├── crossref.py     # CrossRef
+│   │   ├── crossref.py      # CrossRef
 │   │   └── bgpt.py          # BGPT 医学数据库
 │   ├── assess/               # 质量评估工具
-│   │   ├── rob2.py          # RoB 2 (Cochrane)
-│   │   ├── robins.py        # ROBINS-I
-│   │   ├── grade.py         # GRADE
-│   │   └── jbi.py           # JBI 清单
-│   ├── synthesize/           # 证据合成
-│   │   ├── pico.py          # PICO 框架
+│   │   ├── rob2.py         # RoB 2 (Cochrane)
+│   │   ├── robins.py         # ROBINS-I
+│   │   ├── grade.py          # GRADE
+│   │   └── jbi.py            # JBI 清单
+│   ├── synthesize/            # 证据合成
+│   │   ├── pico.py           # PICO 框架
 │   │   ├── evidence_table.py # 证据表格
 │   │   └── prisma.py        # PRISMA 流程图
-│   ├── write/                # 写作辅助
-│   │   ├── imrad.py         # IMRAD 综述
+│   ├── write/                 # 写作辅助
+│   │   ├── imrad.py          # IMRAD 综述
 │   │   └── references.py     # 参考文献格式化
-│   ├── meta/                # Meta 分析
+│   ├── meta/                 # Meta 分析
 │   │   ├── effect_size.py   # 效应量提取
-│   │   ├── heterogeneity.py # 异质性统计
+│   │   ├── heterogeneity.py  # 异质性统计
 │   │   ├── forest_plot.py   # 森林图
-│   │   └── analyzer.py      # Meta 流水线
-│   └── kg/                  # 知识图谱
-│       ├── extractor.py      # 实体/关系抽取
-│       └── builder.py        # KG 构建 + 趋势分析
-├── SKILL.md                 # OpenClaw Skill 定义
-├── requirements.txt          # Python 依赖
-└── README.md               # 本文件
+│   │   └── analyzer.py       # Meta 流水线
+│   └── kg/                   # 知识图谱
+│       ├── extractor.py        # 实体/关系抽取
+│       └── builder.py         # KG 构建 + 趋势分析
+├── SKILL.md                  # OpenClaw Skill 定义
+├── requirements.txt           # Python 依赖
+└── README.md              # 本文件
 ```
 
 ---
@@ -300,17 +261,17 @@ A: 确认网络可访问外网。PubMed API 地址为 `https://eutils.ncbi.nlm.n
 **Q: 出现 `SSL` 相关错误？**
 A: 公司网络可能拦截 HTTPS 请求。可尝试：
 ```powershell
-set SSL_CERT_FILE=C:\Python312\Lib\site-packages\certifi\ cacert.pem
-python scripts/research.py search "your query" --database pubmed
+set SSL_CERT_FILE=C:\Python312\Lib\site-packages\certifi\cacert.pem
+python scripts/paper_tools.py search "your query" --database pubmed
 ```
 
 **Q: arXiv 检索超时？**
-A: arXiv 已切换至 HTTPS 协议，确保网络可访问 `https://export.arxiv.org`。
+A: arXiv 已切换至 HTTPS，确保网络可访问 `https://export.arxiv.org`。
 
 **Q: 如何批量处理多篇论文？**
 A: 将论文保存为文本文件放入目录，用 `--texts` 参数批量处理：
 ```powershell
-python scripts/research.py kg-build --texts ./papers/ --format json
+python scripts/paper_tools.py kg-build --texts ./papers/ --format json
 ```
 
 ---
@@ -319,6 +280,4 @@ python scripts/research.py kg-build --texts ./papers/ --format json
 
 MIT License
 
-## Star History
-
-如果这个工具对你的研究有帮助，欢迎 ⭐ Star！
+如有帮助，欢迎 ⭐ Star！
