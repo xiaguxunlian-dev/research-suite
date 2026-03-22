@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PaperTools — Modern GUI Launcher v2.0
+PaperTools — Modern GUI Launcher v2.1
 现代化界面设计，支持结果可视化与一键流转
+直接在 GUI 内调用功能模块，无需外部 Python
 """
 import sys
 import io
@@ -10,7 +11,6 @@ import os
 import json
 import threading
 import queue
-import subprocess
 from pathlib import Path
 from datetime import datetime
 
@@ -29,6 +29,36 @@ if sys.stderr and hasattr(sys.stderr, 'buffer'):
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+
+# ── 导入功能模块 ──────────────────────────────────────────────────
+# 延迟导入，避免启动时加载
+_searcher = None
+def get_searcher():
+    global _searcher
+    if _searcher is None:
+        from search.federated import FederatedSearcher
+        from config import Config
+        _searcher = FederatedSearcher(api_keys=Config().get_api_keys())
+    return _searcher
+
+_table_generator = None
+def get_table_generator():
+    global _table_generator
+    if _table_generator is None:
+        from synthesize.evidence_table import EvidenceTableGenerator
+        _table_generator = EvidenceTableGenerator()
+    return _table_generator
+
+_writer = None
+_pico_extractor = None
+def get_writer_and_pico():
+    global _writer, _pico_extractor
+    if _writer is None:
+        from write.imrad import IMRADWriter
+        from synthesize.pico import PICOExtractor
+        _writer = IMRADWriter()
+        _pico_extractor = PICOExtractor()
+    return _writer, _pico_extractor
 
 # ── 现代配色方案 (Dark Glassmorphism) ─────────────────────────────
 COLORS = {
@@ -208,7 +238,7 @@ class PaperToolsApp:
         tk.Label(sidebar, text='🔬 PaperTools', font=FONTS['title'],
                 bg=COLORS['bg_secondary'], fg=COLORS['text']).pack(pady=(20, 10), padx=20, anchor='w')
         
-        tk.Label(sidebar, text='v2.0', font=FONTS['small'],
+        tk.Label(sidebar, text='v2.1', font=FONTS['small'],
                 bg=COLORS['bg_secondary'], fg=COLORS['text_secondary']).pack(padx=20, anchor='w')
         
         # 分隔线
@@ -477,64 +507,31 @@ class PaperToolsApp:
         self._log(f'🔍 开始检索: {query}', 'info')
         self._set_status('检索中...')
         
-        # 禁用按钮防止重复点击
         # 在线程中执行
         threading.Thread(target=self._search_thread, args=(query,), daemon=True).start()
         
     def _search_thread(self, query):
+        """直接调用搜索模块，不通过子进程"""
         try:
-            script = os.path.join(_BASE, 'scripts', 'paper_tools.py')
-            output_file = os.path.join(_BASE, 'temp_results.json')
+            dbs = self.db_var.get().split(',')
+            limit = self.limit_var.get()
             
-            # 检测是否在 PyInstaller 打包环境中运行
-            if getattr(sys, 'frozen', False):
-                # 打包环境：使用 python 命令直接运行脚本
-                cmd = [
-                    'python', script,
-                    'search', query,
-                    '--database', self.db_var.get(),
-                    '--limit', str(self.limit_var.get()),
-                    '--output', output_file
-                ]
-            else:
-                # 开发环境：使用当前 Python 解释器
-                cmd = [
-                    sys.executable, script,
-                    'search', query,
-                    '--database', self.db_var.get(),
-                    '--limit', str(self.limit_var.get()),
-                    '--output', output_file
-                ]
+            searcher = get_searcher()
+            results = searcher.search(query, databases=dbs, limit=limit)
             
-            proc = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, encoding='utf-8', errors='replace',
-                env={**os.environ, 'PYTHONPATH': _BASE}
-            )
+            # 保存结果
+            self.current_results = results
             
-            output = []
-            for line in proc.stdout:
-                output.append(line)
-                self.q.put(('log', line))
-                
-            proc.wait()
+            # 更新 UI
+            self.q.put(('search_done', results))
             
-            if proc.returncode == 0:
-                # 加载结果
-                self.q.put(('search_done', os.path.join(_BASE, 'temp_results.json')))
-            else:
-                self.q.put(('error', '检索失败'))
-                
         except Exception as e:
-            self.q.put(('error', str(e)))
+            self.q.put(('error', f'检索失败: {str(e)}'))
             
-    def _load_results_to_table(self, filepath):
+    def _load_results_to_table(self, results):
         """加载检索结果到表格"""
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                self.current_results = json.load(f)
-                
-            papers = self.current_results.get('papers', [])
+            papers = results.get('papers', [])
             self._update_result_table(papers)
             self._set_status(f'检索完成，共 {len(papers)} 篇文献')
             self._log(f'✅ 检索完成，共 {len(papers)} 篇文献', 'success')
@@ -591,20 +588,54 @@ class PaperToolsApp:
         """基于当前结果生成证据表格"""
         if not self.current_results:
             return
-        temp_path = os.path.join(_BASE, 'temp_results.json')
-        threading.Thread(target=self._downstream_thread, 
-                        args=(['table', '--from', temp_path],), 
-                        daemon=True).start()
+        self._log('📊 正在生成证据表格...', 'info')
+        self._set_status('生成表格中...')
+        threading.Thread(target=self._table_thread, daemon=True).start()
+        
+    def _table_thread(self):
+        """直接调用表格生成模块"""
+        try:
+            papers = self.current_results.get('papers', [])
+            generator = get_table_generator()
+            table = generator.generate(papers, format_='markdown')
+            
+            # 显示结果
+            self.q.put(('show_result', ('证据表格', table)))
+            self.q.put(('success', '表格生成完成'))
+            
+        except Exception as e:
+            self.q.put(('error', f'生成表格失败: {str(e)}'))
         
     def _gen_review(self):
         """基于当前结果生成综述"""
         if not self.current_results:
             return
-        temp_path = os.path.join(_BASE, 'temp_results.json')
-        topic = self.current_results.get('query', 'Research Topic')
-        threading.Thread(target=self._downstream_thread,
-                        args=(['review', '--from', temp_path, '--topic', topic],),
-                        daemon=True).start()
+        self._log('✍️ 正在生成综述...', 'info')
+        self._set_status('生成综述中...')
+        threading.Thread(target=self._review_thread, daemon=True).start()
+        
+    def _review_thread(self):
+        """直接调用综述生成模块"""
+        try:
+            papers = self.current_results.get('papers', [])
+            topic = self.current_results.get('query', 'Research Topic')
+            
+            writer, extractor = get_writer_and_pico()
+            pico = extractor.extract(topic)
+            
+            review = writer.generate(
+                topic=topic,
+                papers=papers,
+                pico=pico,
+                sections=['background', 'methods'],
+            )
+            
+            # 显示结果
+            self.q.put(('show_result', ('综述草稿', review)))
+            self.q.put(('success', '综述生成完成'))
+            
+        except Exception as e:
+            self.q.put(('error', f'生成综述失败: {str(e)}'))
         
     def _save_results(self):
         """保存结果到用户选择的位置"""
@@ -619,34 +650,42 @@ class PaperToolsApp:
                 json.dump(self.current_results, f, ensure_ascii=False, indent=2)
             self._log(f'💾 结果已保存到: {filepath}', 'success')
             
-    def _downstream_thread(self, args):
-        """执行下游功能"""
-        try:
-            script = os.path.join(_BASE, 'scripts', 'paper_tools.py')
-            
-            # 检测是否在 PyInstaller 打包环境中运行
-            if getattr(sys, 'frozen', False):
-                cmd = ['python', script] + args
-            else:
-                cmd = [sys.executable, script] + args
-            
-            proc = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, encoding='utf-8'
+    def _show_result_window(self, title, content):
+        """显示结果窗口"""
+        window = tk.Toplevel(self.root)
+        window.title(title)
+        window.geometry('800x600')
+        window.configure(bg=COLORS['bg'])
+        
+        # 文本框
+        text = tk.Text(window, font=FONTS['mono'], bg=COLORS['bg_card'], 
+                      fg=COLORS['text'], relief='flat', wrap='word',
+                      padx=20, pady=20)
+        text.pack(fill='both', expand=True, padx=10, pady=10)
+        text.insert('1.0', content)
+        text.config(state='disabled')
+        
+        # 按钮区
+        btn_frame = tk.Frame(window, bg=COLORS['bg'])
+        btn_frame.pack(fill='x', padx=10, pady=10)
+        
+        def save_to_file():
+            filepath = filedialog.asksaveasfilename(
+                defaultextension='.md',
+                filetypes=[('Markdown', '*.md'), ('Text', '*.txt'), ('All', '*.*')]
             )
-            
-            for line in proc.stdout:
-                self.q.put(('log', line))
-                
-            proc.wait()
-            
-            if proc.returncode == 0:
-                self.q.put(('success', f'{args[0]} 完成'))
-            else:
-                self.q.put(('error', f'{args[0]} 失败'))
-                
-        except Exception as e:
-            self.q.put(('error', str(e)))
+            if filepath:
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                self._log(f'💾 已保存到: {filepath}', 'success')
+        
+        tk.Button(btn_frame, text='💾 保存到文件', font=FONTS['body'],
+                 bg=COLORS['accent'], fg=COLORS['text'], relief='flat',
+                 padx=20, pady=5, command=save_to_file).pack(side='right')
+        
+        tk.Button(btn_frame, text='关闭', font=FONTS['body'],
+                 bg=COLORS['bg_card'], fg=COLORS['text'], relief='flat',
+                 padx=20, pady=5, command=window.destroy).pack(side='right', padx=10)
             
     # ── 其他视图（简化实现）─────────────────────────────────────────
     def _show_table_view(self):
@@ -731,6 +770,9 @@ class PaperToolsApp:
                     self._log(data.strip())
                 elif msg_type == 'search_done':
                     self._load_results_to_table(data)
+                elif msg_type == 'show_result':
+                    title, content = data
+                    self._show_result_window(title, content)
                 elif msg_type == 'success':
                     self._log(f'✅ {data}', 'success')
                     self._set_status('就绪')
