@@ -1,4 +1,7 @@
-# PaperTools — 论文工具
+# PaperTools — 科研助手
+
+[![Release](https://img.shields.io/github/v/release/xiaguxunlian-dev/PaperTools)](https://github.com/xiaguxunlian-dev/PaperTools/releases)
+[![License](https://img.shields.io/github/license/xiaguxunlian-dev/PaperTools)](LICENSE)
 
 多功能文献研究工具包：多源文献检索、证据质量评估、Meta 分析、知识图谱构建，零 API Key 即可上手。
 
@@ -6,7 +9,50 @@
 
 ---
 
-## 功能总览
+## 🚀 快速开始（推荐）
+
+### 方式一：GUI 图形界面（ easiest ）
+
+下载 `PaperTools.exe`，双击即可运行，无需安装 Python！
+
+📥 **[下载 PaperTools.exe](https://github.com/xiaguxunlian-dev/PaperTools/releases/latest/download/PaperTools.exe)**
+
+#### 使用流程
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. 下载 PaperTools.exe                                     │
+│     ↓                                                       │
+│  2. 双击运行（无需安装）                                     │
+│     ↓                                                       │
+│  3. 输入检索词（如：COVID-19 vaccine）                       │
+│     ↓                                                       │
+│  4. 点击「🔍 开始检索」                                      │
+│     ↓                                                       │
+│  5. 查看右侧结果列表                                         │
+│     ↓                                                       │
+│  6. 点击「📊 生成表格」或「✍️ 写综述」                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### GUI 界面特性
+
+| 特性 | 说明 |
+|------|------|
+| 🎨 **超大字体** | 3倍放大，对笔记本和老年人友好 |
+| 🔘 **大圆角设计** | 16-24px 圆角，现代化视觉体验 |
+| 🌙 **暗色主题** | 护眼的深色玻璃拟态界面 |
+| 📐 **三栏布局** | 左侧导航 \| 中间工作区 \| 右侧结果面板 |
+| ⚡ **一键流转** | 检索结果直接生成表格/综述 |
+
+#### 系统要求
+
+- Windows 10/11
+- 屏幕分辨率建议 1920×1080 或更高
+
+---
+
+## 📦 功能总览
 
 | 模块 | 命令 | 说明 |
 |------|------|------|
@@ -25,9 +71,9 @@
 
 ---
 
-## 快速安装
+## 💻 命令行安装（开发者）
 
-### 方式一：一键安装（推荐）
+### 方式二：一键安装
 
 ```powershell
 # 1. 安装 Python 3.12+
@@ -45,7 +91,7 @@ pip install -r requirements.txt
 python scripts/paper_tools.py --help
 ```
 
-### 方式二：便携使用（无需安装）
+### 方式三：便携使用（无需安装）
 
 ```powershell
 # 只需 Python，直接运行主脚本
@@ -54,7 +100,7 @@ python scripts/paper_tools.py search "CRISPR cancer" --database pubmed --limit 3
 
 ---
 
-## 使用教程
+## 📖 使用教程
 
 ### 1. 文献检索
 
@@ -175,7 +221,7 @@ python scripts/paper_tools.py review --topic "Immunotherapy melanoma" --sections
 
 ---
 
-## API Key 配置（可选）
+## 🔧 API Key 配置（可选）
 
 以下数据库可免费申请 API Key，提升检索频率限制：
 
@@ -197,10 +243,12 @@ python scripts/paper_tools.py config --list-keys
 
 ---
 
-## 项目结构
+## 📁 项目结构
 
 ```
 PaperTools/
+├── dist/
+│   └── PaperTools.exe          # 🎉 GUI 可执行文件（Windows）
 ├── scripts/
 │   ├── paper_tools.py          # 主 CLI 入口
 │   ├── config.py               # 配置管理
@@ -232,6 +280,8 @@ PaperTools/
 │   └── kg/                   # 知识图谱
 │       ├── extractor.py        # 实体/关系抽取
 │       └── builder.py         # KG 构建 + 趋势分析
+├── main_gui.py                 # GUI 界面源码
+├── PaperTools.spec             # PyInstaller 打包配置
 ├── SKILL.md                  # OpenClaw Skill 定义
 ├── requirements.txt           # Python 依赖
 └── README.md              # 本文件
@@ -239,7 +289,7 @@ PaperTools/
 
 ---
 
-## 依赖说明
+## 📋 依赖说明
 
 | 依赖包 | 用途 |
 |--------|------|
@@ -253,7 +303,16 @@ PaperTools/
 
 ---
 
-## 常见问题
+## ❓ 常见问题
+
+**Q: 下载的 PaperTools.exe 无法运行？**
+A: 请确保：
+1. 从 [Releases](https://github.com/xiaguxunlian-dev/PaperTools/releases) 页面下载最新版本
+2. Windows 10/11 系统
+3. 屏幕分辨率至少 1600×900
+
+**Q: GUI 界面字体太小？**
+A: 当前版本已优化为 3 倍大字体，如仍需调整，请提交 Issue。
 
 **Q: PubMed 检索返回 0 结果？**
 A: 确认网络可访问外网。PubMed API 地址为 `https://eutils.ncbi.nlm.nih.gov`，无需 VPN。
@@ -276,8 +335,18 @@ python scripts/paper_tools.py kg-build --texts ./papers/ --format json
 
 ---
 
-## 许可证
+## 📄 许可证
 
 MIT License
 
 如有帮助，欢迎 ⭐ Star！
+
+---
+
+## 🙏 致谢
+
+感谢以下开源项目：
+- [PubMed E-utilities](https://www.ncbi.nlm.nih.gov/home/develop/api/)
+- [arXiv API](https://arxiv.org/help/api)
+- [Semantic Scholar API](https://api.semanticscholar.org/)
+- [OpenAlex](https://openalex.org/)

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PaperTools — Modern GUI Launcher v2.0
+PaperTools — Modern GUI Launcher v2.1
 现代化界面设计，支持结果可视化与一键流转
+直接在 GUI 内调用功能模块，无需外部 Python
 """
 import sys
 import io
@@ -10,7 +11,6 @@ import os
 import json
 import threading
 import queue
-import subprocess
 from pathlib import Path
 from datetime import datetime
 
@@ -30,6 +30,36 @@ if sys.stderr and hasattr(sys.stderr, 'buffer'):
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
+# ── 导入功能模块 ──────────────────────────────────────────────────
+# 延迟导入，避免启动时加载
+_searcher = None
+def get_searcher():
+    global _searcher
+    if _searcher is None:
+        from search.federated import FederatedSearcher
+        from config import Config
+        _searcher = FederatedSearcher(api_keys=Config().get_api_keys())
+    return _searcher
+
+_table_generator = None
+def get_table_generator():
+    global _table_generator
+    if _table_generator is None:
+        from synthesize.evidence_table import EvidenceTableGenerator
+        _table_generator = EvidenceTableGenerator()
+    return _table_generator
+
+_writer = None
+_pico_extractor = None
+def get_writer_and_pico():
+    global _writer, _pico_extractor
+    if _writer is None:
+        from write.imrad import IMRADWriter
+        from synthesize.pico import PICOExtractor
+        _writer = IMRADWriter()
+        _pico_extractor = PICOExtractor()
+    return _writer, _pico_extractor
+
 # ── 现代配色方案 (Dark Glassmorphism) ─────────────────────────────
 COLORS = {
     'bg': '#0a0e17',
@@ -47,13 +77,22 @@ COLORS = {
     'border': '#374151',
 }
 
-# ── 字体配置 ──────────────────────────────────────────────────────
+# ── 圆角配置 ──────────────────────────────────────────────────────
+RADIUS = {
+    'small': 8,
+    'medium': 16,
+    'large': 24,
+    'xl': 32,
+}
+
+# ── 字体配置 ─────────────────────────────────────────────────────-
+# 超大字体模式：调大3倍，对视力不佳用户友好
 FONTS = {
-    'title': ('Segoe UI', 20, 'bold'),
-    'subtitle': ('Segoe UI', 12),
-    'body': ('Segoe UI', 10),
-    'mono': ('Consolas', 9),
-    'small': ('Segoe UI', 9),
+    'title': ('Segoe UI', 32, 'bold'),      # 超大标题
+    'subtitle': ('Segoe UI', 20),           # 大副标题
+    'body': ('Segoe UI', 16),               # 正文
+    'mono': ('Consolas', 15),               # 等宽
+    'small': ('Segoe UI', 14),              # 小字也不小
 }
 
 # ── 功能定义 ──────────────────────────────────────────────────────
@@ -112,9 +151,9 @@ FEATURES = {
 
 
 class ModernButton(tk.Canvas):
-    """圆角按钮组件"""
-    def __init__(self, parent, text, command=None, width=120, height=36, 
-                 bg=None, fg=None, hover_bg=None, font=None, **kwargs):
+    """大圆角按钮组件"""
+    def __init__(self, parent, text, command=None, width=160, height=56, 
+                 bg=None, fg=None, hover_bg=None, font=None, radius=None, **kwargs):
         self.bg = bg or COLORS['accent']
         self.fg = fg or COLORS['text']
         self.hover_bg = hover_bg or COLORS['accent_hover']
@@ -125,7 +164,7 @@ class ModernButton(tk.Canvas):
         
         self.font = font or FONTS['body']
         self.text = text
-        self.radius = 8
+        self.radius = radius or RADIUS['medium']  # 默认中等圆角
         
         self.bind('<Enter>', self._on_enter)
         self.bind('<Leave>', self._on_leave)
@@ -167,12 +206,63 @@ class ModernButton(tk.Canvas):
             self.command()
 
 
+class RoundedCard(tk.Canvas):
+    """大圆角卡片组件"""
+    def __init__(self, parent, width=400, height=300, bg=None, 
+                 border_color=None, border_width=0, radius=None, **kwargs):
+        self.bg = bg or COLORS['bg_card']
+        self.border_color = border_color or COLORS['border']
+        self.border_width = border_width
+        self.radius = radius or RADIUS['large']
+        
+        super().__init__(parent, width=width, height=height,
+                        bg=parent['bg'], highlightthickness=0, **kwargs)
+        
+        self._draw()
+        
+        # 创建内容框架
+        self.content_frame = tk.Frame(self, bg=self.bg)
+        self.content_window = self.create_window(
+            self.radius, self.radius,
+            window=self.content_frame, anchor='nw',
+            width=width - self.radius*2, height=height - self.radius*2
+        )
+        
+    def _draw(self):
+        self.delete('all')
+        w, h = self.winfo_reqwidth(), self.winfo_reqheight()
+        r = self.radius
+        
+        # 绘制圆角矩形
+        points = self._get_rounded_rect_points(0, 0, w, h, r)
+        self.create_polygon(points, smooth=True, fill=self.bg, outline='')
+        
+        # 绘制边框
+        if self.border_width > 0:
+            border_points = self._get_rounded_rect_points(
+                self.border_width/2, self.border_width/2, 
+                w-self.border_width/2, h-self.border_width/2, r
+            )
+            self.create_polygon(border_points, smooth=True, fill='', 
+                              outline=self.border_color, width=self.border_width)
+    
+    def _get_rounded_rect_points(self, x1, y1, x2, y2, radius):
+        """获取圆角矩形的点坐标"""
+        r = min(radius, (x2-x1)/2, (y2-y1)/2)
+        points = [
+            x1+r, y1, x2-r, y1, x2, y1, x2, y1+r,
+            x2, y2-r, x2, y2, x2-r, y2, x1+r, y2,
+            x1, y2, x1, y2-r, x1, y1+r, x1, y1
+        ]
+        return points
+
+
 class PaperToolsApp:
     def __init__(self, root):
         self.root = root
         self.root.title('PaperTools — 科研助手')
-        self.root.geometry('1400x900')
-        self.root.minsize(1200, 700)
+        self.root.geometry('1920x1080')
+        self.root.minsize(1600, 900)
         self.root.configure(bg=COLORS['bg'])
         
         # 状态管理
@@ -200,7 +290,7 @@ class PaperToolsApp:
         self._build_result_panel()
         
     def _build_sidebar(self):
-        sidebar = tk.Frame(self.root, bg=COLORS['bg_secondary'], width=220)
+        sidebar = tk.Frame(self.root, bg=COLORS['bg_secondary'], width=280)
         sidebar.grid(row=0, column=0, sticky='nsew')
         sidebar.grid_propagate(False)
         
@@ -208,7 +298,7 @@ class PaperToolsApp:
         tk.Label(sidebar, text='🔬 PaperTools', font=FONTS['title'],
                 bg=COLORS['bg_secondary'], fg=COLORS['text']).pack(pady=(20, 10), padx=20, anchor='w')
         
-        tk.Label(sidebar, text='v2.0', font=FONTS['small'],
+        tk.Label(sidebar, text='v2.1', font=FONTS['small'],
                 bg=COLORS['bg_secondary'], fg=COLORS['text_secondary']).pack(padx=20, anchor='w')
         
         # 分隔线
@@ -229,34 +319,47 @@ class PaperToolsApp:
         self.status_label.pack(side='bottom', pady=15, padx=20, anchor='w')
         
     def _create_nav_button(self, parent, icon, text, command):
-        frame = tk.Frame(parent, bg=COLORS['bg_secondary'], height=40)
-        frame.pack_propagate(False)
+        # 使用 Canvas 实现大圆角按钮
+        btn_canvas = tk.Canvas(parent, bg=COLORS['bg_secondary'], height=64, 
+                              highlightthickness=0)
+        btn_canvas.pack(fill='x', padx=12, pady=6)
+        
+        r = RADIUS['medium']
+        w = 256  # 按钮宽度
+        h = 64   # 按钮高度
+        
+        def draw_button(color):
+            btn_canvas.delete('all')
+            # 绘制大圆角矩形
+            points = [
+                r, 0, w-r, 0, w, 0, w, r,
+                w, h-r, w, h, w-r, h, r, h,
+                0, h, 0, h-r, 0, r, 0, 0
+            ]
+            btn_canvas.create_polygon(points, smooth=True, fill=color, outline='')
+            # 文字
+            btn_canvas.create_text(w/2, h/2, text=f'{icon}  {text}', 
+                                  font=FONTS['body'], fill=COLORS['text'])
         
         # 悬停效果
         def on_enter(e):
-            frame.config(bg=COLORS['bg_card'])
-            for w in frame.winfo_children():
-                w.config(bg=COLORS['bg_card'])
+            draw_button(COLORS['bg_hover'])
+            btn_canvas.config(cursor='hand2')
                 
         def on_leave(e):
-            frame.config(bg=COLORS['bg_secondary'])
-            for w in frame.winfo_children():
-                w.config(bg=COLORS['bg_secondary'])
-                
-        frame.bind('<Enter>', on_enter)
-        frame.bind('<Leave>', on_leave)
-        frame.bind('<Button-1>', lambda e: command())
-        
-        tk.Label(frame, text=f'{icon}  {text}', font=FONTS['body'],
-                bg=COLORS['bg_secondary'], fg=COLORS['text']).pack(side='left', padx=15)
-        
-        # 让所有子元素也触发点击
-        for child in frame.winfo_children():
-            child.bind('<Button-1>', lambda e: command())
-            child.bind('<Enter>', on_enter)
-            child.bind('<Leave>', on_leave)
+            draw_button(COLORS['bg_secondary'])
             
-        return frame
+        def on_click(e):
+            command()
+                
+        btn_canvas.bind('<Enter>', on_enter)
+        btn_canvas.bind('<Leave>', on_leave)
+        btn_canvas.bind('<Button-1>', on_click)
+        
+        # 初始绘制
+        draw_button(COLORS['bg_secondary'])
+            
+        return btn_canvas
         
     def _build_main_content(self):
         self.main_frame = tk.Frame(self.root, bg=COLORS['bg'])
@@ -276,12 +379,16 @@ class PaperToolsApp:
                                   font=FONTS['subtitle'], bg=COLORS['bg'], fg=COLORS['text_secondary'])
         self.desc_label.pack(anchor='w', pady=(5, 0))
         
-        # 内容卡片
-        self.content_card = tk.Frame(self.main_frame, bg=COLORS['bg_card'], 
-                                    highlightbackground=COLORS['border'], highlightthickness=1)
-        self.content_card.grid(row=1, column=0, sticky='nsew')
+        # 内容卡片 - 使用大圆角设计
+        self.content_card = tk.Frame(self.main_frame, bg=COLORS['bg_card'])
+        self.content_card.grid(row=1, column=0, sticky='nsew', padx=10, pady=10)
         self.content_card.columnconfigure(0, weight=1)
         self.content_card.rowconfigure(0, weight=1)
+        
+        # 添加圆角效果（通过内边距和背景色）
+        self.content_card_inner = tk.Frame(self.content_card, bg=COLORS['bg_card'])
+        self.content_card_inner.place(relx=0.5, rely=0.5, anchor='center', 
+                                     relwidth=1, relheight=1)
         
         # 动态内容容器
         self.content_container = tk.Frame(self.content_card, bg=COLORS['bg_card'])
@@ -291,26 +398,29 @@ class PaperToolsApp:
         self._show_search_view()
         
     def _build_result_panel(self):
-        """右侧结果面板 - 显示检索结果表格"""
-        self.result_frame = tk.Frame(self.root, bg=COLORS['bg_secondary'], width=450)
+        """右侧结果面板 - 显示检索结果表格，大圆角设计"""
+        self.result_frame = tk.Frame(self.root, bg=COLORS['bg_secondary'], width=680)
         self.result_frame.grid(row=0, column=2, sticky='nsew', padx=(0, 0))
         self.result_frame.grid_propagate(False)
         
-        # 结果面板标题
-        header = tk.Frame(self.result_frame, bg=COLORS['bg_card'], height=50)
-        header.pack(fill='x', padx=0, pady=0)
-        header.pack_propagate(False)
+        # 结果面板标题 - 大圆角卡片
+        header = tk.Frame(self.result_frame, bg=COLORS['bg_secondary'])
+        header.pack(fill='x', padx=15, pady=15)
         
-        tk.Label(header, text='📚 检索结果', font=FONTS['body'],
-                bg=COLORS['bg_card'], fg=COLORS['text']).pack(side='left', padx=15, pady=10)
+        header_inner = tk.Frame(header, bg=COLORS['bg_card'], height=60)
+        header_inner.pack(fill='x')
+        header_inner.pack_propagate(False)
         
-        self.result_count_label = tk.Label(header, text='(0)', font=FONTS['small'],
+        tk.Label(header_inner, text='📚 检索结果', font=FONTS['body'],
+                bg=COLORS['bg_card'], fg=COLORS['text']).pack(side='left', padx=20, pady=12)
+        
+        self.result_count_label = tk.Label(header_inner, text='(0)', font=FONTS['small'],
                                           bg=COLORS['bg_card'], fg=COLORS['text_secondary'])
         self.result_count_label.pack(side='left')
         
-        # 操作按钮区
+        # 操作按钮区 - 大圆角按钮
         self.action_frame = tk.Frame(self.result_frame, bg=COLORS['bg_secondary'])
-        self.action_frame.pack(fill='x', padx=10, pady=10)
+        self.action_frame.pack(fill='x', padx=15, pady=10)
         
         # 下游功能按钮（初始禁用）
         self.action_buttons = {}
@@ -321,9 +431,11 @@ class PaperToolsApp:
         ]
         for text, cmd in actions:
             btn = tk.Button(self.action_frame, text=text, font=FONTS['small'],
-                          bg=COLORS['accent'], fg=COLORS['text'], relief='flat',
-                          padx=12, pady=5, command=cmd, state='disabled')
-            btn.pack(side='left', padx=3)
+                          bg=COLORS['accent'], fg=COLORS['text'], 
+                          relief='flat', cursor='hand2',
+                          padx=20, pady=10, command=cmd, state='disabled',
+                          activebackground=COLORS['accent_hover'])
+            btn.pack(side='left', padx=6)
             self.action_buttons[text] = btn
             
         # 结果表格
@@ -333,25 +445,26 @@ class PaperToolsApp:
         self._build_log_area()
         
     def _build_result_table(self):
-        """构建文献结果表格"""
-        table_frame = tk.Frame(self.result_frame, bg=COLORS['bg_secondary'])
-        table_frame.pack(fill='both', expand=True, padx=10, pady=5)
+        """构建文献结果表格 - 大圆角设计"""
+        table_outer = tk.Frame(self.result_frame, bg=COLORS['bg_secondary'])
+        table_outer.pack(fill='both', expand=True, padx=15, pady=10)
         
-        # 表头
+        # 表头 - 大圆角
         headers = ['☑', '标题', '年份', '来源']
-        col_widths = [3, 35, 8, 10]
+        col_widths = [4, 22, 8, 10]
         
-        header_frame = tk.Frame(table_frame, bg=COLORS['bg_card'])
-        header_frame.pack(fill='x')
+        header_frame = tk.Frame(table_outer, bg=COLORS['bg_card'], height=50)
+        header_frame.pack(fill='x', pady=(0, 5))
+        header_frame.pack_propagate(False)
         
         for i, (h, w) in enumerate(zip(headers, col_widths)):
             tk.Label(header_frame, text=h, font=FONTS['small'],
                     bg=COLORS['bg_card'], fg=COLORS['text_secondary'], 
                     width=w).pack(side='left', padx=2)
                     
-        # 表格内容区（带滚动条）
-        scroll_frame = tk.Frame(table_frame, bg=COLORS['bg_secondary'])
-        scroll_frame.pack(fill='both', expand=True, pady=5)
+        # 表格内容区（带滚动条）- 大圆角
+        scroll_frame = tk.Frame(table_outer, bg=COLORS['bg_card'])
+        scroll_frame.pack(fill='both', expand=True)
         
         self.result_canvas = tk.Canvas(scroll_frame, bg=COLORS['bg_secondary'], 
                                       highlightthickness=0)
@@ -366,7 +479,7 @@ class PaperToolsApp:
         self.result_canvas.pack(side='left', fill='both', expand=True)
         
         self.result_canvas_window = self.result_canvas.create_window(
-            (0, 0), window=self.result_table_inner, anchor='nw', width=420)
+            (0, 0), window=self.result_table_inner, anchor='nw', width=620)
             
         self.result_table_inner.bind('<Configure>', 
             lambda e: self.result_canvas.configure(scrollregion=self.result_canvas.bbox('all')))
@@ -374,18 +487,22 @@ class PaperToolsApp:
         self.result_rows = []  # 保存行引用
         
     def _build_log_area(self):
-        """底部日志输出区"""
-        log_frame = tk.Frame(self.result_frame, bg=COLORS['bg_secondary'], height=200)
-        log_frame.pack(fill='x', side='bottom', padx=10, pady=10)
+        """底部日志输出区 - 大圆角设计"""
+        log_outer = tk.Frame(self.result_frame, bg=COLORS['bg_secondary'])
+        log_outer.pack(fill='x', side='bottom', padx=15, pady=15)
+        
+        log_frame = tk.Frame(log_outer, bg=COLORS['bg_card'], height=220)
+        log_frame.pack(fill='x')
         log_frame.pack_propagate(False)
         
         tk.Label(log_frame, text='📋 执行日志', font=FONTS['small'],
-                bg=COLORS['bg_secondary'], fg=COLORS['text_secondary']).pack(anchor='w', pady=(0, 5))
+                bg=COLORS['bg_card'], fg=COLORS['text_secondary']).pack(anchor='w', padx=15, pady=(10, 5))
         
         self.log_text = tk.Text(log_frame, font=FONTS['mono'], bg=COLORS['bg'],
                                fg=COLORS['text'], relief='flat', height=10,
-                               wrap='word', state='disabled')
-        self.log_text.pack(fill='both', expand=True)
+                               wrap='word', state='disabled',
+                               highlightthickness=0, padx=10, pady=10)
+        self.log_text.pack(fill='both', expand=True, padx=10, pady=(0, 10))
         
         # 颜色标签
         self.log_text.tag_config('success', foreground=COLORS['success'])
@@ -433,10 +550,19 @@ class PaperToolsApp:
         tk.Label(frame, text='检索词', font=FONTS['body'],
                 bg=COLORS['bg_card'], fg=COLORS['text']).pack(anchor='w')
         
-        self.search_entry = tk.Entry(frame, font=FONTS['body'], width=50,
+        # 圆角输入框容器
+        entry_container = tk.Frame(frame, bg=COLORS['bg_card'])
+        entry_container.pack(pady=15, fill='x')
+        
+        self.search_entry = tk.Entry(entry_container, font=FONTS['body'], width=45,
                                     bg=COLORS['bg'], fg=COLORS['text'],
-                                    relief='flat', insertbackground=COLORS['text'])
-        self.search_entry.pack(pady=10, ipady=8)
+                                    relief='flat', insertbackground=COLORS['text'],
+                                    highlightthickness=2,
+                                    highlightbackground=COLORS['border'],
+                                    highlightcolor=COLORS['accent'])
+        self.search_entry.pack(ipady=12, padx=4, pady=4)
+        entry_container.config(highlightbackground=COLORS['border'], 
+                              highlightthickness=2, bd=0)
         self.search_entry.insert(0, 'COVID-19 vaccine efficacy')
         
         # 选项行
@@ -459,14 +585,18 @@ class PaperToolsApp:
         tk.Spinbox(opts_frame, from_=1, to=50, textvariable=self.limit_var, 
                   width=8).pack(side='left', padx=10)
         
-        # 执行按钮
+        # 执行按钮 - 大圆角设计
         btn_frame = tk.Frame(frame, bg=COLORS['bg_card'])
-        btn_frame.pack(pady=20)
+        btn_frame.pack(pady=30)
         
-        tk.Button(btn_frame, text='🔍 开始检索', font=FONTS['body'],
-                 bg=COLORS['accent'], fg=COLORS['text'], relief='flat',
-                 padx=30, pady=10, cursor='hand2',
-                 command=self._do_search).pack()
+        search_btn = ModernButton(btn_frame, text='🔍 开始检索', 
+                                  width=200, height=64,
+                                  bg=COLORS['accent'], 
+                                  hover_bg=COLORS['accent_hover'],
+                                  font=FONTS['body'],
+                                  radius=RADIUS['large'],
+                                  command=self._do_search)
+        search_btn.pack()
         
     def _do_search(self):
         query = self.search_entry.get().strip()
@@ -477,50 +607,31 @@ class PaperToolsApp:
         self._log(f'🔍 开始检索: {query}', 'info')
         self._set_status('检索中...')
         
-        # 禁用按钮防止重复点击
         # 在线程中执行
         threading.Thread(target=self._search_thread, args=(query,), daemon=True).start()
         
     def _search_thread(self, query):
+        """直接调用搜索模块，不通过子进程"""
         try:
-            script = os.path.join(_BASE, 'scripts', 'paper_tools.py')
-            cmd = [
-                sys.executable, script,
-                'search', query,
-                '--database', self.db_var.get(),
-                '--limit', str(self.limit_var.get()),
-                '--output', os.path.join(_BASE, 'temp_results.json')
-            ]
+            dbs = self.db_var.get().split(',')
+            limit = self.limit_var.get()
             
-            proc = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, encoding='utf-8', errors='replace',
-                env={**os.environ, 'PYTHONPATH': _BASE}
-            )
+            searcher = get_searcher()
+            results = searcher.search(query, databases=dbs, limit=limit)
             
-            output = []
-            for line in proc.stdout:
-                output.append(line)
-                self.q.put(('log', line))
-                
-            proc.wait()
+            # 保存结果
+            self.current_results = results
             
-            if proc.returncode == 0:
-                # 加载结果
-                self.q.put(('search_done', os.path.join(_BASE, 'temp_results.json')))
-            else:
-                self.q.put(('error', '检索失败'))
-                
+            # 更新 UI
+            self.q.put(('search_done', results))
+            
         except Exception as e:
-            self.q.put(('error', str(e)))
+            self.q.put(('error', f'检索失败: {str(e)}'))
             
-    def _load_results_to_table(self, filepath):
+    def _load_results_to_table(self, results):
         """加载检索结果到表格"""
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                self.current_results = json.load(f)
-                
-            papers = self.current_results.get('papers', [])
+            papers = results.get('papers', [])
             self._update_result_table(papers)
             self._set_status(f'检索完成，共 {len(papers)} 篇文献')
             self._log(f'✅ 检索完成，共 {len(papers)} 篇文献', 'success')
@@ -577,18 +688,54 @@ class PaperToolsApp:
         """基于当前结果生成证据表格"""
         if not self.current_results:
             return
-        threading.Thread(target=self._downstream_thread, 
-                        args=(['table', '--from', 'temp_results.json'],), 
-                        daemon=True).start()
+        self._log('📊 正在生成证据表格...', 'info')
+        self._set_status('生成表格中...')
+        threading.Thread(target=self._table_thread, daemon=True).start()
+        
+    def _table_thread(self):
+        """直接调用表格生成模块"""
+        try:
+            papers = self.current_results.get('papers', [])
+            generator = get_table_generator()
+            table = generator.generate(papers, format_='markdown')
+            
+            # 显示结果
+            self.q.put(('show_result', ('证据表格', table)))
+            self.q.put(('success', '表格生成完成'))
+            
+        except Exception as e:
+            self.q.put(('error', f'生成表格失败: {str(e)}'))
         
     def _gen_review(self):
         """基于当前结果生成综述"""
         if not self.current_results:
             return
-        topic = self.current_results.get('query', 'Research Topic')
-        threading.Thread(target=self._downstream_thread,
-                        args=(['review', '--from', 'temp_results.json', '--topic', topic],),
-                        daemon=True).start()
+        self._log('✍️ 正在生成综述...', 'info')
+        self._set_status('生成综述中...')
+        threading.Thread(target=self._review_thread, daemon=True).start()
+        
+    def _review_thread(self):
+        """直接调用综述生成模块"""
+        try:
+            papers = self.current_results.get('papers', [])
+            topic = self.current_results.get('query', 'Research Topic')
+            
+            writer, extractor = get_writer_and_pico()
+            pico = extractor.extract(topic)
+            
+            review = writer.generate(
+                topic=topic,
+                papers=papers,
+                pico=pico,
+                sections=['background', 'methods'],
+            )
+            
+            # 显示结果
+            self.q.put(('show_result', ('综述草稿', review)))
+            self.q.put(('success', '综述生成完成'))
+            
+        except Exception as e:
+            self.q.put(('error', f'生成综述失败: {str(e)}'))
         
     def _save_results(self):
         """保存结果到用户选择的位置"""
@@ -603,29 +750,42 @@ class PaperToolsApp:
                 json.dump(self.current_results, f, ensure_ascii=False, indent=2)
             self._log(f'💾 结果已保存到: {filepath}', 'success')
             
-    def _downstream_thread(self, args):
-        """执行下游功能"""
-        try:
-            script = os.path.join(_BASE, 'scripts', 'paper_tools.py')
-            cmd = [sys.executable, script] + args
-            
-            proc = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, encoding='utf-8'
+    def _show_result_window(self, title, content):
+        """显示结果窗口"""
+        window = tk.Toplevel(self.root)
+        window.title(title)
+        window.geometry('800x600')
+        window.configure(bg=COLORS['bg'])
+        
+        # 文本框
+        text = tk.Text(window, font=FONTS['mono'], bg=COLORS['bg_card'], 
+                      fg=COLORS['text'], relief='flat', wrap='word',
+                      padx=20, pady=20)
+        text.pack(fill='both', expand=True, padx=10, pady=10)
+        text.insert('1.0', content)
+        text.config(state='disabled')
+        
+        # 按钮区
+        btn_frame = tk.Frame(window, bg=COLORS['bg'])
+        btn_frame.pack(fill='x', padx=10, pady=10)
+        
+        def save_to_file():
+            filepath = filedialog.asksaveasfilename(
+                defaultextension='.md',
+                filetypes=[('Markdown', '*.md'), ('Text', '*.txt'), ('All', '*.*')]
             )
-            
-            for line in proc.stdout:
-                self.q.put(('log', line))
-                
-            proc.wait()
-            
-            if proc.returncode == 0:
-                self.q.put(('success', f'{args[0]} 完成'))
-            else:
-                self.q.put(('error', f'{args[0]} 失败'))
-                
-        except Exception as e:
-            self.q.put(('error', str(e)))
+            if filepath:
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                self._log(f'💾 已保存到: {filepath}', 'success')
+        
+        tk.Button(btn_frame, text='💾 保存到文件', font=FONTS['body'],
+                 bg=COLORS['accent'], fg=COLORS['text'], relief='flat',
+                 padx=20, pady=5, command=save_to_file).pack(side='right')
+        
+        tk.Button(btn_frame, text='关闭', font=FONTS['body'],
+                 bg=COLORS['bg_card'], fg=COLORS['text'], relief='flat',
+                 padx=20, pady=5, command=window.destroy).pack(side='right', padx=10)
             
     # ── 其他视图（简化实现）─────────────────────────────────────────
     def _show_table_view(self):
@@ -710,6 +870,9 @@ class PaperToolsApp:
                     self._log(data.strip())
                 elif msg_type == 'search_done':
                     self._load_results_to_table(data)
+                elif msg_type == 'show_result':
+                    title, content = data
+                    self._show_result_window(title, content)
                 elif msg_type == 'success':
                     self._log(f'✅ {data}', 'success')
                     self._set_status('就绪')
